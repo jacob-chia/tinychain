@@ -23,10 +23,6 @@ impl Tx {
         TxBuilder::default()
     }
 
-    pub fn is_reward(&self) -> bool {
-        self.data == "reward"
-    }
-
     pub fn gas_cost(&self) -> u64 {
         self.gas * self.gas_price
     }
@@ -108,10 +104,6 @@ pub struct SignedTx {
 impl SignedTx {
     pub fn is_authentic(&self) -> bool {
         wallet::verify(&self.tx.encode(), &self.sig, &self.tx.from).is_ok()
-    }
-
-    pub fn is_reward(&self) -> bool {
-        self.tx.is_reward()
     }
 
     pub fn gas_cost(&self) -> u64 {
