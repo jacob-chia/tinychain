@@ -15,7 +15,7 @@ pub struct State {
     latest_block: Block,
     latest_block_hash: H256,
     mining_difficulty: i32,
-    has_genesis_block: bool,
+    has_blocks: bool,
 }
 
 impl State {

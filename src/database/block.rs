@@ -7,30 +7,23 @@ use super::SignedTx;
 const BLOCK_REWORD: u64 = 100;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+pub struct BlockHeader {
+    parent: H256,
+    number: u64,
+    nonce: u64,
+    time: u64,
+    miner: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Block {
     header: BlockHeader,
     txs: Vec<SignedTx>,
 }
 
-impl Block {
-    pub fn new(
-        parent: H256,
-        number: u64,
-        nonce: u64,
-        time: u64,
-        miner: &str,
-        txs: Vec<SignedTx>,
-    ) -> Self {
-        Self {
-            header: BlockHeader {
-                parent: parent,
-                number: number,
-                nonce: nonce,
-                time: time,
-                miner: miner.to_owned(),
-            },
-            txs: txs,
-        }
+impl<'a> Block {
+    pub fn builder() -> BlockBuilder<'a> {
+        BlockBuilder::default()
     }
 
     pub fn update_nonce(mut self, nonce: u64) -> Self {
@@ -43,18 +36,65 @@ impl Block {
         hash_message(encoded)
     }
 
-    pub fn gas_reward(&self) -> u64 {
-        self.txs.iter().map(|tx| tx.gas_cost()).sum()
+    pub fn block_reward(&self) -> u64 {
+        let gas_reward: u64 = self.txs.iter().map(|tx| tx.gas_cost()).sum();
+        gas_reward + BLOCK_REWORD
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct BlockHeader {
+#[derive(Debug, Default)]
+pub struct BlockBuilder<'a> {
     parent: H256,
     number: u64,
     nonce: u64,
     time: u64,
-    miner: String,
+    miner: &'a str,
+    txs: Vec<SignedTx>,
+}
+
+impl<'a> BlockBuilder<'a> {
+    pub fn parent(mut self, parent: H256) -> Self {
+        self.parent = parent;
+        self
+    }
+
+    pub fn number(mut self, number: u64) -> Self {
+        self.number = number;
+        self
+    }
+
+    pub fn nonce(mut self, nonce: u64) -> Self {
+        self.nonce = nonce;
+        self
+    }
+
+    pub fn time(mut self, time: u64) -> Self {
+        self.time = time;
+        self
+    }
+
+    pub fn miner(mut self, miner: &'a str) -> Self {
+        self.miner = miner;
+        self
+    }
+
+    pub fn txs(mut self, txs: Vec<SignedTx>) -> Self {
+        self.txs = txs;
+        self
+    }
+
+    pub fn build(self) -> Block {
+        Block {
+            header: BlockHeader {
+                number: self.number,
+                parent: self.parent,
+                nonce: self.nonce,
+                time: self.time,
+                miner: self.miner.to_owned(),
+            },
+            txs: self.txs,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

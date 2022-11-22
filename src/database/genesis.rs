@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use anyhow::Result;
 use serde::Deserialize;
 use std::{
     collections::HashMap,
@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use super::*;
+use super::{BLOCKDB_PATH, DATABASE_DIR, GENESIS_PATH};
 
 const GENESIS_DATA: &str = r#"{
 	"symbol": "TCH",
@@ -33,7 +33,7 @@ impl Genesis {
     }
 }
 
-fn init_genesis_if_not_exists() -> Result<(), Error> {
+fn init_genesis_if_not_exists() -> Result<()> {
     let database_dir = DATABASE_DIR.get().unwrap();
     let genesis_path = GENESIS_PATH.get().unwrap();
     if Path::new(genesis_path).exists() {

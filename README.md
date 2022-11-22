@@ -10,3 +10,19 @@
 - 存储：`文件`存储
 
 ## 模块说明
+
+## 代码导读
+
+### database
+
+#### block
+
+[database/block.rs](src/database/block.rs)
+
+- builder模式
+- miner字段`&'static str` vs `String`
+- mem::take
+
+#### genesis
+
+- anyhow::Error
