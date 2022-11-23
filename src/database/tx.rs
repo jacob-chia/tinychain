@@ -6,16 +6,16 @@ use crate::wallet;
 const GAS: u64 = 21;
 const GAS_PRICE: u64 = 21;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tx {
-    from: String,
-    to: String,
-    value: u64,
-    data: String,
-    nonce: u64,
-    gas: u64,
-    gas_price: u64,
-    time: u64,
+    pub(super) from: String,
+    pub(super) to: String,
+    pub(super) value: u64,
+    pub(super) data: String,
+    pub(super) nonce: u64,
+    pub(super) gas: u64,
+    pub(super) gas_price: u64,
+    pub(super) time: u64,
 }
 
 impl Tx {
@@ -95,7 +95,7 @@ impl TxBuilder {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SignedTx {
     pub(super) tx: Tx,
     pub(super) sig: String,

@@ -8,7 +8,7 @@ use std::{
 
 use super::*;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct State {
     balances: HashMap<String, u64>,
     account2nonce: HashMap<String, u64>,
@@ -32,8 +32,55 @@ impl State {
         Ok(state)
     }
 
+    pub fn next_block_number(&self) -> u64 {
+        if self.has_blocks {
+            return self.latest_block.header.number + 1;
+        }
+
+        0
+    }
+
     pub fn next_account_nonce(&self, account: &str) -> u64 {
         *self.account2nonce.get(account).unwrap_or(&0) + 1
+    }
+
+    pub fn latest_block(&self) -> &Block {
+        &self.latest_block
+    }
+
+    pub fn latest_block_hash(&self) -> &H256 {
+        &self.latest_block_hash
+    }
+
+    pub fn add_block(&mut self, block: Block) -> Result<H256> {
+        // Why clone?
+        let mut state = self.clone();
+        state.apply_block(block)?;
+        state.persist()?;
+
+        // blockHash := b.Hash()
+        // blockFsJson, _ := json.Marshal(BlockFS{blockHash, b})
+        // log.Printf("\nPersisting new block to disk:\n")
+        // log.Printf("\t%s\n", blockFsJson)
+        // if _, err := s.dbFile.Write(append(blockFsJson, '\n')); err != nil {
+        //     return Hash{}, err
+        // }
+
+        // // set search caches
+        // fs, _ := s.dbFile.Stat()
+        // filePos := fs.Size() + 1
+        // s.HashCache[blockHash.Hex()] = filePos
+        // s.HeightCache[b.Header.Number] = filePos
+
+        // s.hasGenesisBlock = true
+        // s.latestBlock = b
+        // s.latestBlockHash = blockHash
+        // s.Balances = sCopy.Balances
+        // s.Account2Nonce = sCopy.Account2Nonce
+
+        // return blockHash, nil
+
+        Ok(H256::default())
     }
 
     fn load_db(&mut self) -> Result<()> {
@@ -43,25 +90,36 @@ impl State {
 
         for line in lines {
             if let Ok(ref block_str) = line {
-                self.load_one_block(block_str)?;
+                let mut block_kv: BlockKV = serde_json::from_str(block_str)?;
+                let block = block_kv.take_block();
+                self.apply_block(block)?;
             }
         }
 
         Ok(())
     }
 
-    fn load_one_block(&mut self, block_str: &str) -> Result<()> {
-        let mut block_kv: BlockKV = serde_json::from_str(block_str)?;
-        let hash = block_kv.take_hash();
-        let block = block_kv.take_block();
+    fn write2db(&self) -> Result<()> {
+        let block_kv = serde_json::to_string(&BlockKV {
+            key: self.latest_block_hash,
+            value: self.latest_block.clone(),
+        })?;
+    }
 
-        self.check_block(&block, &hash);
-        // self.apply_txs(&block.txs)?;
+    fn apply_block(&mut self, block: Block) -> Result<()> {
+        self.check_block(&block)?;
+        self.apply_txs(&block.txs)?;
+
+        *self.balances.entry(block.header.miner.clone()).or_default() += block.block_reward();
+
+        self.latest_block_hash = block.hash();
+        self.latest_block = block;
+        self.has_blocks = true;
 
         Ok(())
     }
 
-    fn check_block(&self, block: &Block, hash: &H256) -> Result<()> {
+    fn check_block(&self, block: &Block) -> Result<()> {
         // check number
         let expected_number = self.latest_block.header.number + 1;
         if self.has_blocks && expected_number != block.header.number {
@@ -82,8 +140,8 @@ impl State {
         }
 
         // check hash
-        if hash[..] != block.hash()[..] || !self.is_valid_hash(hash) {
-            return Err(anyhow!("invalid block hash: '{hash}'"));
+        if !self.is_valid_hash(&block.hash()) {
+            return Err(anyhow!("invalid block hash: '{}'", block.hash()));
         }
 
         Ok(())
@@ -97,6 +155,11 @@ impl State {
     fn apply_txs(&mut self, signed_txs: &[SignedTx]) -> Result<()> {
         for signed_tx in signed_txs {
             self.check_tx(signed_tx)?;
+
+            let tx = &signed_tx.tx;
+            *self.balances.get_mut(&tx.from).unwrap() -= tx.cost();
+            *self.balances.entry(tx.to.clone()).or_default() += tx.value;
+            *self.account2nonce.get_mut(&tx.from).unwrap() = tx.nonce;
         }
 
         Ok(())
@@ -105,9 +168,32 @@ impl State {
     fn check_tx(&self, signed_tx: &SignedTx) -> Result<()> {
         // check signature
         if !signed_tx.is_valid_signature() {
-            return Err(anyhow!("invalid tx signature"));
+            return Err(anyhow!("wrong Tx. invalid signature"));
         }
+
+        let tx = &signed_tx.tx;
+
         // check account nonce
+        let expected_nonce = self.next_account_nonce(&tx.from);
+        if expected_nonce != tx.nonce {
+            return Err(anyhow!(
+                "wrong Tx. Sender '{}' nonce error: expected '{}', not '{}'",
+                tx.from,
+                expected_nonce,
+                tx.nonce
+            ));
+        }
+
+        // check balance
+        let balance = *self.balances.get(&tx.from).unwrap_or(&0);
+        if balance < tx.cost() {
+            return Err(anyhow!(
+                "wrong Tx. Sender '{}' insufficient balance: cost '{}', balance is '{}'",
+                tx.from,
+                tx.cost(),
+                balance
+            ));
+        }
 
         Ok(())
     }
