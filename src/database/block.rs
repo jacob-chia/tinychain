@@ -6,7 +6,7 @@ use super::SignedTx;
 
 const BLOCK_REWORD: u64 = 100;
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct BlockHeader {
     pub(super) parent: H256,
     pub(super) number: u64,
@@ -15,7 +15,7 @@ pub struct BlockHeader {
     pub(super) miner: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Block {
     pub(super) header: BlockHeader,
     pub(super) txs: Vec<SignedTx>,
