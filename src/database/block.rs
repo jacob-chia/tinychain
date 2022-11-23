@@ -99,8 +99,8 @@ impl<'a> BlockBuilder<'a> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockKV {
-    key: H256,
-    value: Block,
+    pub(super) key: H256,
+    pub(super) value: Block,
 }
 
 impl BlockKV {

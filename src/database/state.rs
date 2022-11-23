@@ -2,9 +2,11 @@ use anyhow::{anyhow, Result};
 use ethers_core::types::H256;
 use std::{
     collections::HashMap,
-    fs::File,
-    io::{BufRead, BufReader},
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, Write},
+    mem,
 };
+use tracing::info;
 
 use super::*;
 
@@ -57,30 +59,9 @@ impl State {
         let mut state = self.clone();
         state.apply_block(block)?;
         state.persist()?;
+        *self = state;
 
-        // blockHash := b.Hash()
-        // blockFsJson, _ := json.Marshal(BlockFS{blockHash, b})
-        // log.Printf("\nPersisting new block to disk:\n")
-        // log.Printf("\t%s\n", blockFsJson)
-        // if _, err := s.dbFile.Write(append(blockFsJson, '\n')); err != nil {
-        //     return Hash{}, err
-        // }
-
-        // // set search caches
-        // fs, _ := s.dbFile.Stat()
-        // filePos := fs.Size() + 1
-        // s.HashCache[blockHash.Hex()] = filePos
-        // s.HeightCache[b.Header.Number] = filePos
-
-        // s.hasGenesisBlock = true
-        // s.latestBlock = b
-        // s.latestBlockHash = blockHash
-        // s.Balances = sCopy.Balances
-        // s.Account2Nonce = sCopy.Account2Nonce
-
-        // return blockHash, nil
-
-        Ok(H256::default())
+        Ok(self.latest_block_hash)
     }
 
     fn load_db(&mut self) -> Result<()> {
@@ -99,11 +80,20 @@ impl State {
         Ok(())
     }
 
-    fn write2db(&self) -> Result<()> {
-        let block_kv = serde_json::to_string(&BlockKV {
+    fn persist(&self) -> Result<()> {
+        let block_json = serde_json::to_string(&BlockKV {
             key: self.latest_block_hash,
             value: self.latest_block.clone(),
         })?;
+        info!("Persisting new block to disk:");
+        info!("\t{block_json}");
+
+        let db_path = BLOCKDB_PATH.get().unwrap();
+        let mut file = OpenOptions::new().append(true).open(db_path)?;
+
+        file.write_all(block_json.as_bytes())?;
+
+        Ok(())
     }
 
     fn apply_block(&mut self, block: Block) -> Result<()> {
