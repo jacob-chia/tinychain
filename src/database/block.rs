@@ -8,17 +8,17 @@ const BLOCK_REWORD: u64 = 100;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct BlockHeader {
-    parent: H256,
-    number: u64,
-    nonce: u64,
-    time: u64,
-    miner: String,
+    pub(super) parent: H256,
+    pub(super) number: u64,
+    pub(super) nonce: u64,
+    pub(super) time: u64,
+    pub(super) miner: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Block {
-    header: BlockHeader,
-    txs: Vec<SignedTx>,
+    pub(super) header: BlockHeader,
+    pub(super) txs: Vec<SignedTx>,
 }
 
 impl<'a> Block {

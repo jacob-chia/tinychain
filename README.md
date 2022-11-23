@@ -13,6 +13,10 @@
 
 ## 代码导读
 
+数据结构
+- 两个nonce
+- number
+
 ### database
 
 #### block
@@ -26,3 +30,7 @@
 #### genesis
 
 - anyhow::Error
+
+#### state
+
+- slice 的比较，is_valid_hash

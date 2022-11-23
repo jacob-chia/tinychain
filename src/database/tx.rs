@@ -43,11 +43,11 @@ impl Tx {
 
 #[derive(Debug, Default)]
 pub struct TxBuilder {
-    from: String,
-    to: String,
-    value: u64,
-    data: String,
-    nonce: u64,
+    pub(super) from: String,
+    pub(super) to: String,
+    pub(super) value: u64,
+    pub(super) data: String,
+    pub(super) nonce: u64,
 }
 
 impl TxBuilder {
@@ -97,12 +97,12 @@ impl TxBuilder {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SignedTx {
-    tx: Tx,
-    sig: String,
+    pub(super) tx: Tx,
+    pub(super) sig: String,
 }
 
 impl SignedTx {
-    pub fn is_authentic(&self) -> bool {
+    pub fn is_valid_signature(&self) -> bool {
         wallet::verify(&self.tx.encode(), &self.sig, &self.tx.from).is_ok()
     }
 
