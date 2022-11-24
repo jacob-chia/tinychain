@@ -90,8 +90,6 @@ impl State {
             value: self.latest_block.clone(),
         })?;
         block_json.push('\n');
-        info!("Persisting new block to disk:");
-        info!("\t{block_json}");
 
         let db_path = BLOCKDB_PATH.get().unwrap();
         let mut file = OpenOptions::new().append(true).open(db_path)?;
@@ -105,7 +103,10 @@ impl State {
         self.check_block(&block)?;
         self.apply_txs(&block.txs)?;
 
-        *self.balances.entry(block.header.miner.clone()).or_default() += block.block_reward();
+        *self
+            .balances
+            .entry(block.header.miner.to_owned())
+            .or_default() += block.block_reward();
 
         self.latest_block_hash = block.hash();
         self.latest_block = block;
@@ -154,7 +155,7 @@ impl State {
 
             let tx = &signed_tx.tx;
             *self.balances.get_mut(&tx.from).unwrap() -= tx.cost();
-            *self.balances.entry(tx.to.clone()).or_default() += tx.value;
+            *self.balances.entry(tx.to.to_owned()).or_default() += tx.value;
             *self.account2nonce.entry(tx.from.to_owned()).or_default() = tx.nonce;
         }
 

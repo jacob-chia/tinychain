@@ -27,7 +27,7 @@ impl Tx {
     }
 
     pub fn cost(&self) -> u64 {
-        self.value * self.gas_cost()
+        self.value + self.gas_cost()
     }
 
     pub fn encode(&self) -> String {
