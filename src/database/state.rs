@@ -85,10 +85,11 @@ impl State {
     }
 
     fn persist(&self) -> Result<()> {
-        let block_json = serde_json::to_string(&BlockKV {
+        let mut block_json = serde_json::to_string(&BlockKV {
             key: self.latest_block_hash,
             value: self.latest_block.clone(),
         })?;
+        block_json.push('\n');
         info!("Persisting new block to disk:");
         info!("\t{block_json}");
 
