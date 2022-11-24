@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::time::SystemTime;
 
+use crate::utils;
 use crate::wallet;
 
 const GAS: u64 = 21;
@@ -11,7 +11,6 @@ pub struct Tx {
     pub(super) from: String,
     pub(super) to: String,
     pub(super) value: u64,
-    pub(super) data: String,
     pub(super) nonce: u64,
     pub(super) gas: u64,
     pub(super) gas_price: u64,
@@ -46,7 +45,6 @@ pub struct TxBuilder {
     pub(super) from: String,
     pub(super) to: String,
     pub(super) value: u64,
-    pub(super) data: String,
     pub(super) nonce: u64,
 }
 
@@ -66,31 +64,20 @@ impl TxBuilder {
         self
     }
 
-    pub fn data(mut self, data: &str) -> Self {
-        self.data = data.to_owned();
-        self
-    }
-
     pub fn nonce(mut self, nonce: u64) -> Self {
         self.nonce = nonce;
         self
     }
 
     pub fn build(self) -> Tx {
-        let time = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
         Tx {
             from: self.from,
             to: self.to,
             value: self.value,
-            data: self.data,
             nonce: self.nonce,
             gas: GAS,
             gas_price: GAS_PRICE,
-            time: time,
+            time: utils::unix_timestamp(),
         }
     }
 }
@@ -109,10 +96,6 @@ impl SignedTx {
     pub fn gas_cost(&self) -> u64 {
         self.tx.gas_cost()
     }
-
-    pub fn cost(&self) -> u64 {
-        self.tx.cost()
-    }
 }
 
 #[cfg(test)]
@@ -125,14 +108,12 @@ mod tests {
             .from("alice")
             .to("bob")
             .value(100)
-            .data("")
             .nonce(1)
             .build();
 
         assert_eq!("alice", tx.from);
         assert_eq!("bob", tx.to);
         assert_eq!(100, tx.value);
-        assert_eq!("", tx.data);
         assert_eq!(1, tx.nonce);
     }
 }

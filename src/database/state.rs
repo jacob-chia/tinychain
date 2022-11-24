@@ -22,6 +22,9 @@ pub struct State {
 impl State {
     pub fn new(mining_difficulty: usize) -> Result<Self> {
         let genesis = Genesis::load()?;
+        info!("Genesis loaded");
+        info!("\tToken symbol: {}", genesis.symbol);
+        info!("\tBalances: {:?}", genesis.balances);
 
         let mut state = Self {
             balances: genesis.clone_balances(),
@@ -31,6 +34,10 @@ impl State {
 
         state.load_db()?;
         Ok(state)
+    }
+
+    pub fn get_balances(&self) -> &HashMap<String, u64> {
+        &self.balances
     }
 
     pub fn next_block_number(&self) -> u64 {
@@ -138,7 +145,8 @@ impl State {
 
     fn is_valid_hash(&self, hash: &H256) -> bool {
         let hash_prefix = vec![0u8; self.mining_difficulty];
-        hash_prefix[..] == hash[..self.mining_difficulty]
+        // TODO
+        hash_prefix[..] != hash[..self.mining_difficulty]
     }
 
     fn apply_txs(&mut self, signed_txs: &[SignedTx]) -> Result<()> {
@@ -148,7 +156,7 @@ impl State {
             let tx = &signed_tx.tx;
             *self.balances.get_mut(&tx.from).unwrap() -= tx.cost();
             *self.balances.entry(tx.to.clone()).or_default() += tx.value;
-            *self.account2nonce.get_mut(&tx.from).unwrap() = tx.nonce;
+            *self.account2nonce.entry(tx.from.to_owned()).or_default() = tx.nonce;
         }
 
         Ok(())

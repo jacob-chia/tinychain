@@ -61,7 +61,28 @@ cargo build
 1. once_cell和lazy_static应该用哪个？
 2. 错误处理
 
+### database | 数据层
+
+#### 相关依赖
+
+- [serde](https://serde.rs/)
+
+#### 演示
+
+```sh
+./target/debug/tinychain new-account
+```
+
+#### 问题
+
+1. once_cell和lazy_static应该用哪个？
+2. 错误处理
+
 ### database
+
+#### genesis
+
+- anyhow::Error
 
 #### block
 
@@ -70,10 +91,6 @@ cargo build
 - builder模式
 - miner字段`&'static str` vs `String`
 - mem::take
-
-#### genesis
-
-- anyhow::Error
 
 #### state
 
