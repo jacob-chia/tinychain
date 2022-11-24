@@ -4,7 +4,7 @@ use std::time::SystemTime;
 use crate::wallet;
 
 const GAS: u64 = 21;
-const GAS_PRICE: u64 = 21;
+const GAS_PRICE: u64 = 1;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tx {
@@ -112,5 +112,27 @@ impl SignedTx {
 
     pub fn cost(&self) -> u64 {
         self.tx.cost()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tx_builder() {
+        let tx = Tx::builder()
+            .from("alice")
+            .to("bob")
+            .value(100)
+            .data("")
+            .nonce(1)
+            .build();
+
+        assert_eq!("alice", tx.from);
+        assert_eq!("bob", tx.to);
+        assert_eq!(100, tx.value);
+        assert_eq!("", tx.data);
+        assert_eq!(1, tx.nonce);
     }
 }

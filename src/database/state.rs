@@ -4,7 +4,6 @@ use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, Write},
-    mem,
 };
 use tracing::info;
 
