@@ -48,10 +48,7 @@ fn air_drops(state: &mut State, miner: &str) -> Result<()> {
         .txs(txs)
         .build();
 
-    debug!("block: {:?}", block);
     block.update_nonce(2);
-    debug!("block: {:?}", block);
-
     state.add_block(block)?;
 
     Ok(())
