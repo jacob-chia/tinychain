@@ -98,3 +98,8 @@ cargo build
 - hashmap的操作
 - add_block 为什么需要clone -> 操作失败需要回滚，暂不考虑并发
 - 哪些struct需要clone
+
+
+----
+
+![](substrate.png)

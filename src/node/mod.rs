@@ -1,7 +1,6 @@
 use crate::{database::*, utils};
 use anyhow::Result;
-use ethers_core::types::H256;
-use tracing::debug;
+use log::debug;
 
 const MINING_DIFFICULTY: usize = 3;
 const ALICE: &'static str = "3d211869-2505-4394-bd99-0c76eb761bf9";
@@ -18,11 +17,12 @@ pub fn run(_ip: &str, _port: u16, miner: &str) -> Result<()> {
 }
 
 fn air_drops(state: &mut State, miner: &str) -> Result<()> {
+    let miner_nonce = state.next_account_nonce(miner);
     let tx1 = Tx::builder()
         .from(miner)
         .to(ALICE)
         .value(100)
-        .nonce(1)
+        .nonce(miner_nonce)
         .build()
         .sign();
 
@@ -30,16 +30,18 @@ fn air_drops(state: &mut State, miner: &str) -> Result<()> {
         .from(miner)
         .to(BOB)
         .value(100)
-        .nonce(2)
+        .nonce(miner_nonce + 1)
         .build()
         .sign();
 
     let txs = vec![tx1, tx2];
     let time = utils::unix_timestamp();
 
+    let parent = state.latest_block_hash().to_owned();
+    let block_number = state.next_block_number();
     let mut block = Block::builder()
-        .parent(H256::default())
-        .number(0)
+        .parent(parent)
+        .number(block_number)
         .nonce(1)
         .time(time)
         .miner(miner)

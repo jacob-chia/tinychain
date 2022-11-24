@@ -1,11 +1,11 @@
 use anyhow::{anyhow, Result};
 use ethers_core::types::H256;
+use log::info;
 use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, Write},
 };
-use tracing::info;
 
 use super::*;
 
@@ -22,9 +22,7 @@ pub struct State {
 impl State {
     pub fn new(mining_difficulty: usize) -> Result<Self> {
         let genesis = Genesis::load()?;
-        info!("Genesis loaded");
-        info!("\tToken symbol: {}", genesis.symbol);
-        info!("\tBalances: {:?}", genesis.balances);
+        info!("Genesis loaded, token symbol: {}", genesis.symbol);
 
         let mut state = Self {
             balances: genesis.clone_balances(),

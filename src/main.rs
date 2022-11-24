@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use tracing::info;
+use log::info;
 
 mod database;
 mod node;
@@ -39,7 +39,7 @@ enum SubCommand {
 }
 
 fn main() {
-    tracing_subscriber::fmt::init();
+    env_logger::init();
 
     // 解析命令行参数
     let opts = Opts::parse();
