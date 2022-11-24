@@ -46,3 +46,26 @@ fn get_wallet(account: &str) -> Result<LocalWallet> {
     let wallet = LocalWallet::decrypt_keystore(&keypath, PASSWORD)?;
     Ok(wallet)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_keystore_dir() {
+        set_keystore_dir("/home/che/");
+        assert_eq!("/home/che/keystore/", get_keystore_dir());
+    }
+
+    #[test]
+    fn test_wallet() {
+        set_keystore_dir("/tmp/");
+
+        let acc = new_account().unwrap();
+        let msg = "hello world";
+        let sig = sign(msg, &acc).unwrap();
+        assert!(verify(msg, &sig, &acc).is_ok());
+
+        fs::remove_dir_all(get_keystore_dir()).unwrap();
+    }
+}
