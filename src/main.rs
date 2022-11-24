@@ -45,7 +45,7 @@ fn main() {
 
     match opts.subcmd {
         SubCommand::NewAccount { datadir } => {
-            wallet::set_keystore_dir(&datadir);
+            wallet::init_keystore_dir(&datadir);
             let acc = wallet::new_account().unwrap();
             info!("New account created: {:?}", acc);
             info!("Saved in: {}", wallet::get_keystore_dir());
@@ -56,7 +56,7 @@ fn main() {
             port,
             miner,
         } => {
-            wallet::set_keystore_dir(&datadir);
+            wallet::init_keystore_dir(&datadir);
             database::set_database_dir(&datadir);
             node::run(&ip, port, &miner).unwrap();
         }

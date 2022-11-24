@@ -7,10 +7,11 @@ use std::{fs, str::FromStr};
 const PASSWORD: &str = "774411";
 static KEYSTORE_DIR: OnceCell<String> = OnceCell::new();
 
-pub fn set_keystore_dir(datadir: &str) {
+pub fn init_keystore_dir(datadir: &str) {
     let mut dir = datadir.to_owned();
     dir.push_str("keystore/");
-    KEYSTORE_DIR.set(dir).unwrap();
+
+    KEYSTORE_DIR.get_or_init(|| dir);
 }
 
 pub fn new_account() -> Result<String> {
@@ -52,14 +53,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_keystore_dir() {
-        set_keystore_dir("/home/che/");
-        assert_eq!("/home/che/keystore/", get_keystore_dir());
+    fn test_keystore_dir_can_only_be_initialized_once() {
+        init_keystore_dir("/tmp/");
+        assert_eq!("/tmp/keystore/", get_keystore_dir());
+
+        init_keystore_dir("/another/dir/");
+        assert_eq!("/tmp/keystore/", get_keystore_dir());
     }
 
     #[test]
     fn test_wallet() {
-        set_keystore_dir("/tmp/");
+        init_keystore_dir("/tmp/");
 
         let acc = new_account().unwrap();
         let msg = "hello world";

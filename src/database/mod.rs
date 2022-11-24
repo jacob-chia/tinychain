@@ -27,3 +27,16 @@ pub fn set_database_dir(datadir: &str) {
     GENESIS_PATH.set(genesis_path).unwrap();
     BLOCKDB_PATH.set(blockdb_path).unwrap();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_database_dir() {
+        set_database_dir("/tmp/");
+        assert_eq!("/tmp/database/", DATABASE_DIR.get().unwrap());
+        assert_eq!("/tmp/database/genesis.json", GENESIS_PATH.get().unwrap());
+        assert_eq!("/tmp/database/block.db", BLOCKDB_PATH.get().unwrap());
+    }
+}
