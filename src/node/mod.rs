@@ -3,6 +3,7 @@ use anyhow::Result;
 use log::debug;
 
 const MINING_DIFFICULTY: usize = 3;
+const TREASURY: &'static str = "2bde5a91-6411-46ba-9173-c3e075d32100";
 const ALICE: &'static str = "3d211869-2505-4394-bd99-0c76eb761bf9";
 const BOB: &'static str = "16d5e01e-709a-4536-a4f2-9f069070c51a";
 
@@ -17,20 +18,20 @@ pub fn run(_ip: &str, _port: u16, miner: &str) -> Result<()> {
 }
 
 fn air_drops(state: &mut State, miner: &str) -> Result<()> {
-    let miner_nonce = state.next_account_nonce(miner);
+    let next_nonce = state.next_account_nonce(TREASURY);
     let tx1 = Tx::builder()
-        .from(miner)
+        .from(TREASURY)
         .to(ALICE)
         .value(100)
-        .nonce(miner_nonce)
+        .nonce(next_nonce)
         .build()
         .sign();
 
     let tx2 = Tx::builder()
-        .from(miner)
+        .from(TREASURY)
         .to(BOB)
         .value(100)
-        .nonce(miner_nonce + 1)
+        .nonce(next_nonce + 1)
         .build()
         .sign();
 
@@ -55,9 +56,8 @@ fn air_drops(state: &mut State, miner: &str) -> Result<()> {
 }
 
 fn print_state(state: &State) {
+    debug!("=========================================");
     debug!("balances: {:?}", state.get_balances());
-    debug!("next_block_number: {}", state.next_block_number());
-    debug!("next_account_nonce: {}", state.next_account_nonce(ALICE));
     debug!("latest_block: {:?}", state.latest_block());
     debug!("latest_block_hash: {:?}", state.latest_block_hash());
 }
