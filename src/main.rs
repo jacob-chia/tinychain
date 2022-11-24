@@ -3,6 +3,7 @@ use tracing::info;
 
 mod database;
 mod node;
+mod utils;
 mod wallet;
 
 /// The command of tiny-chain
@@ -57,7 +58,7 @@ fn main() {
             miner,
         } => {
             wallet::init_keystore_dir(&datadir);
-            database::set_database_dir(&datadir);
+            database::init_database_dir(&datadir);
             node::run(&ip, port, &miner).unwrap();
         }
     }

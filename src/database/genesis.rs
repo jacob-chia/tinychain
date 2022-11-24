@@ -11,14 +11,14 @@ use super::{BLOCKDB_PATH, DATABASE_DIR, GENESIS_PATH};
 const GENESIS_DATA: &str = r#"{
 	"symbol": "TCH",
 	"balances": {
-	  "0x09eE50f2F37FcBA1845dE6FE5C762E83E65E755c": 1000000
+	  "2bde5a91-6411-46ba-9173-c3e075d32100": 1000000
 	}
 }"#;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Genesis {
-    symbol: String,
-    balances: HashMap<String, u64>,
+    pub(super) symbol: String,
+    pub(super) balances: HashMap<String, u64>,
 }
 
 impl Genesis {

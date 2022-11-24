@@ -26,9 +26,8 @@ impl<'a> Block {
         BlockBuilder::default()
     }
 
-    pub fn update_nonce(mut self, nonce: u64) -> Self {
+    pub fn update_nonce(&mut self, nonce: u64) {
         self.header.nonce = nonce;
-        self
     }
 
     pub fn hash(&self) -> H256 {
@@ -104,9 +103,9 @@ pub struct BlockKV {
 }
 
 impl BlockKV {
-    pub fn take_hash(&mut self) -> H256 {
-        mem::take(&mut self.key)
-    }
+    // pub fn take_hash(&mut self) -> H256 {
+    //     mem::take(&mut self.key)
+    // }
 
     pub fn take_block(&mut self) -> Block {
         mem::take(&mut self.value)
