@@ -59,7 +59,9 @@ impl State {
     }
 
     pub fn add_block(&mut self, block: Block) -> Result<H256> {
-        // Why clone?
+        // 为什么需要clone？
+        // 当中间过程出错时，state需要回滚状态
+        // 一个简单的实现是：现在clone上执行，当没有错误时再用clone替换本体
         let mut state = self.clone();
         state.apply_block(block)?;
         state.persist()?;
