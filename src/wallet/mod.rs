@@ -23,8 +23,9 @@ pub fn new_account() -> Result<String> {
 }
 
 pub fn sign(msg: &str, account: &str) -> Result<String> {
-    let wallet = get_wallet(account)?;
-    let sig = wallet.sign_hash(hash_message(msg)).to_string();
+    let sig = get_wallet(account)?
+        .sign_hash(hash_message(msg))
+        .to_string();
 
     Ok(sig)
 }

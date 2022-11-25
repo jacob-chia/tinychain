@@ -92,9 +92,10 @@ impl State {
         block_json.push('\n');
 
         let db_path = BLOCKDB_PATH.get().unwrap();
-        let mut file = OpenOptions::new().append(true).open(db_path)?;
-
-        file.write_all(block_json.as_bytes())?;
+        OpenOptions::new()
+            .append(true)
+            .open(db_path)?
+            .write_all(block_json.as_bytes())?;
 
         Ok(())
     }
