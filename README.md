@@ -56,7 +56,7 @@ cargo build
 
 ```sh
 cargo build
-./target/debug/tinychain new-account
+RUST_LOG=debug ./target/debug/tinychain new-account
 ```
 
 演示账户说明：
