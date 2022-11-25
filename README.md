@@ -32,7 +32,7 @@ src
 
 #### 相关依赖
 
-- [clap文档](https://docs.rs/crate/clap/4.0.18)
+- [clap](https://docs.rs/crate/clap/4.0.18): 命令行解析
 
 #### 演示
 
@@ -75,7 +75,7 @@ cargo build
 
 #### 相关依赖
 
-- [serde](https://serde.rs/)
+- [serde](https://serde.rs/)：序列化/反序列化
 - [once-cell](https://docs.rs/crate/once_cell/1.15.0)：lazy static
 - [anyhow](https://docs.rs/crate/anyhow/1.0.66)：错误处理
 
