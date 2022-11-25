@@ -68,9 +68,41 @@ cargo build
 #### 关键代码
 
 1. 如果想定义`堆上`常量或`运行时`才能确定值的常量，怎么办？
+
 2. 如何优雅地处理错误？
 
+### database | 数据层
 
+#### 相关依赖
+
+- [serde](https://serde.rs/)
+- [once-cell](https://docs.rs/crate/once_cell/1.15.0)：lazy static
+- [anyhow](https://docs.rs/crate/anyhow/1.0.66)：错误处理
+
+#### 演示
+
+```sh
+cargo build
+RUST_LOG=debug ./target/debug/tinychain run -m "346b4cd8-10b6-47ba-a091-6a57bb1afcf9"
+```
+
+#### 关键代码
+
+1. builder模式（`node/mod.rs`）
+
+2. `derive macro`派生宏怎么用？（几乎所有struct都用到了派生宏）
+
+3. 如何从一个结构体实例中“拿走”一个字段的所有权？（`state.rs,block.rs`）
+
+4. Rust中如何使用`HashMap`？（`state.rs`）
+
+5. slice的比较（`state.rs`）
+
+6. 更精细的可见性控制（struct中的字段）
+
+7. 在iterator上执行`map/filter/take`等骚操作（`block.rs`）
+
+8. 生命周期入门，思路同派生宏（`block.rs`）
 
 ----
 
