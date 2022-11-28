@@ -121,7 +121,7 @@ pub fn sign(msg: &str, account: &str) -> Result<String> {
 }
 ```
 
-### database | 数据层
+### database | 状态（state）管理
 
 #### 相关依赖
 
