@@ -241,6 +241,7 @@ pub fn block_reward(&self) -> u64 {
   - 初始状态：不用
   - 大部分情况下，编译器可以自己推断
   - 当编译器无法推断时，它会提示你，`按照编译器的提示`加上生命周期注解
+  - [关于生命周期的误解](https://github.com/pretzelhammer/rust-blog/blob/master/posts/translations/zh-hans/common-rust-lifetime-misconceptions.md)
 
 ----
 
