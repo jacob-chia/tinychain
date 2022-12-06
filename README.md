@@ -32,7 +32,7 @@ src
 
 #### 相关依赖
 
-- [clap](https://docs.rs/crate/clap/4.0.18): 命令行解析
+- [clap](https://docs.rs/clap/latest/clap/): 命令行解析
 
 #### 演示
 
@@ -47,10 +47,10 @@ cargo build
 
 #### 相关依赖
 
-- [ethers-signers](https://docs.rs/crate/ethers-signers/0.17.0)：账户管理
-- [ethers-core](https://docs.rs/crate/ethers-core/0.17.0)：只用到了Hash函数和Hash结果的类型
-- [once-cell](https://docs.rs/crate/once_cell/1.15.0)：lazy static
-- [anyhow](https://docs.rs/crate/anyhow/1.0.66)：错误处理
+- [ethers-signers](https://docs.rs/ethers-signers/latest/ethers_signers/)：账户管理
+- [ethers-core](https://docs.rs/ethers-core/latest/ethers_core/)：只用到了Hash函数和Hash结果的类型
+- [once-cell](https://docs.rs/once_cell/latest/once_cell/)：lazy static
+- [anyhow](https://docs.rs/anyhow/latest/anyhow/)：错误处理
 
 #### 演示
 
@@ -101,7 +101,7 @@ const fn num() -> u64 {
 2. 如何优雅地处理错误？
 
 - 先上结论
-  - [anyhow](https://docs.rs/crate/anyhow/1.0.66): 不关心错误类型，只想简单地处理错误 —— 适用于`bin`
+  - [anyhow](https://docs.rs/anyhow/latest/anyhow/): 不关心错误类型，只想简单地处理错误 —— 适用于`bin`
   - [thiserror](https://docs.rs/thiserror/latest/thiserror/): 定义清晰的错误类型 —— 适用于`lib`
 
 - 使用`?`传播错误，前提是`?`处的错误可以自动转为`返回值声明的ErrorType`
@@ -126,8 +126,8 @@ pub fn sign(msg: &str, account: &str) -> Result<String> {
 #### 相关依赖
 
 - [serde](https://serde.rs/)：序列化/反序列化
-- [once-cell](https://docs.rs/crate/once_cell/1.15.0)：lazy static
-- [anyhow](https://docs.rs/crate/anyhow/1.0.66)：错误处理
+- [once-cell](https://docs.rs/once_cell/latest/once_cell/)：lazy static
+- [anyhow](https://docs.rs/anyhow/latest/anyhow/)：错误处理
 
 #### 演示
 
