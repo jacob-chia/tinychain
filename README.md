@@ -84,7 +84,7 @@ fn main() {
 
 ![](img/static-non-const-fn.png)
 
-- 什么是`const fn`？简单理解为`可以在编译器求值的fn`。
+- 什么是`const fn`？可简单理解为`可以在编译器求值的fn`。
 
 ```rs
 static M: u64 = num();
@@ -151,7 +151,7 @@ let tx1 = Tx::builder()
 ```
 
 2. `derive macro`派生宏怎么用？（几乎所有struct都用到了派生宏）
-  - 初始状态：一个都不不需要
+  - 初始状态：一个都不需要
   - 在写代码过程中`根据编译器提示`逐个添加
 
 3. 如何从一个结构体实例中“拿走”一个字段的所有权？（`state.rs,block.rs`）
@@ -213,7 +213,7 @@ fn is_valid_hash(&self, hash: &H256) -> bool {
 6. 更精细的可见性控制（struct中的字段）
   - [官方文档](https://doc.rust-lang.org/reference/visibility-and-privacy.html)
 
-7. 在iterator上执行`map/filter/take`等骚操作（`block.rs`）
+7. 在iterator上执行`map/filter/take`等操作（`block.rs`）
 
 ```rs
 // Iterator
