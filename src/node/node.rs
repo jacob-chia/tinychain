@@ -1,9 +1,9 @@
 use database::*;
 
 struct Peer {
-    ip: &'static str,
+    ip: String,
     port: u16,
-    account: &'static str,
+    account: String,
     is_bootstrap: bool,
     connected: bool,
 }
