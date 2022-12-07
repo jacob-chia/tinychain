@@ -1,16 +1,65 @@
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::get,
+    Router,
+};
+use log::{debug, info};
+use std::net::SocketAddr;
+
 use crate::{database::*, utils};
-use anyhow::Result;
-use log::debug;
 
 // 挖矿计算难度
 const MINING_DIFFICULTY: usize = 3;
+
+pub async fn run(_ip: &str, _port: u16, miner: &str) {
+    temp(miner);
+
+    let app = Router::new().route("/", get(hello));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    info!("Listening on {}", addr);
+    axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
+}
+
+async fn hello() -> Result<(), NodeError> {
+    Ok(())
+}
+
+// Make our own error that wraps `anyhow::Error`.
+struct NodeError(anyhow::Error);
+
+// Tell axum how to convert `NodeError` into a response.
+impl IntoResponse for NodeError {
+    fn into_response(self) -> Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Something went wrong: {}", self.0),
+        )
+            .into_response()
+    }
+}
+
+// This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
+// `Result<_, NodeError>`. That way you don't need to do that manually.
+impl<E> From<E> for NodeError
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(err: E) -> Self {
+        Self(err.into())
+    }
+}
+
 // 演示账户
 const TREASURY: &'static str = "2bde5a91-6411-46ba-9173-c3e075d32100";
 const ALICE: &'static str = "3d211869-2505-4394-bd99-0c76eb761bf9";
 const BOB: &'static str = "16d5e01e-709a-4536-a4f2-9f069070c51a";
 
-pub fn run(_ip: &str, _port: u16, miner: &str) -> Result<()> {
-    let mut state = State::new(MINING_DIFFICULTY)?;
+fn temp(miner: &str) {
+    let mut state = State::new(MINING_DIFFICULTY).unwrap();
 
     debug!("Accounts =========================================");
     debug!("TREASURY: {}", TREASURY);
@@ -19,13 +68,11 @@ pub fn run(_ip: &str, _port: u16, miner: &str) -> Result<()> {
     debug!("MINER   : {}", miner);
 
     print_state(&state);
-    airdrops(&mut state, miner)?;
+    airdrops(&mut state, miner);
     print_state(&state);
-
-    Ok(())
 }
 
-fn airdrops(state: &mut State, miner: &str) -> Result<()> {
+fn airdrops(state: &mut State, miner: &str) {
     debug!("Airdrops =========================================");
     debug!("TREASURY -> ALICE: 100");
     debug!("TREASURY -> BOB  : 100");
@@ -63,9 +110,7 @@ fn airdrops(state: &mut State, miner: &str) -> Result<()> {
 
     // 需要不断update_nonce -> 计算hash -> 直到hash满足要求
     block.update_nonce(2);
-    state.add_block(block)?;
-
-    Ok(())
+    state.add_block(block).unwrap();
 }
 
 fn print_state(state: &State) {

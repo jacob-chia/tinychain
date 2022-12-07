@@ -6,7 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0" # 错误处理
+anyhow = "1.0"     # 错误处理
+once_cell = "1.15" # Lazy static
 clap = { version = "4.0", features = ["derive"] } # 命令行解析
 ethers-core = "0.17"    # 账户管理、签名、验签
 ethers-signers = "0.17" # 账户管理、签名、验签
@@ -14,4 +15,5 @@ log = "0.4"        # 日志
 env_logger = "0.9" # 日志
 serde = { version = "1.0", features = ["derive"] } # 序列化/反序列化
 serde_json = "1.0" # 序列化/反序列化
-once_cell = "1.15" # Lazy static
+axum = "0.5" # http server
+tokio = { version = "1.21", features = ["rt", "rt-multi-thread", "macros"] } # 异步运行时
