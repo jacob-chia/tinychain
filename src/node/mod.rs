@@ -12,7 +12,7 @@ use error::*;
 // 挖矿计算难度
 const MINING_DIFFICULTY: usize = 3;
 
-pub async fn run(ip: &str, port: u16, miner: &str) -> Result<(), NodeError> {
+pub async fn run(_addr: &str, miner: &str, _bootstrap_addr: &str) -> Result<(), NodeError> {
     temp::temp(miner);
 
     let app = router::new_router();
