@@ -1,4 +1,5 @@
 use axum::{
+    handler::Handler,
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -15,7 +16,9 @@ const MINING_DIFFICULTY: usize = 3;
 pub async fn run(ip: &str, port: u16, miner: &str) -> Result<(), NodeError> {
     temp(miner);
 
-    let app = Router::new().route("/", get(hello));
+    let app = Router::new()
+        .route("/", get(hello))
+        .fallback(not_found.into_service());
 
     let addr = format!("{ip}:{port}");
     let socket_addr: SocketAddr = addr.parse()?;
@@ -30,6 +33,10 @@ pub async fn run(ip: &str, port: u16, miner: &str) -> Result<(), NodeError> {
 
 async fn hello() -> Result<(), NodeError> {
     Ok(())
+}
+
+async fn not_found() -> impl IntoResponse {
+    (StatusCode::NOT_FOUND, "Not Found")
 }
 
 // Make our own error that wraps `anyhow::Error`.
