@@ -1,3 +1,4 @@
+use axum::Server;
 use log::info;
 use std::net::SocketAddr;
 use tokio::signal;
@@ -19,7 +20,8 @@ pub async fn run(ip: &str, port: u16, miner: &str) -> Result<(), NodeError> {
     let addr = format!("{ip}:{port}");
     let socket_addr: SocketAddr = addr.parse()?;
     info!("Listening on {}", socket_addr);
-    axum::Server::bind(&socket_addr)
+
+    Server::bind(&socket_addr)
         .serve(app.into_make_service())
         .with_graceful_shutdown(shutdown_signal())
         .await
