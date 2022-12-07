@@ -13,6 +13,8 @@
 
 ## Office Hour 1
 
+对应的代码分支：`git switch 01-wallet-database`
+
 ### main | 命令行解析
 
 #### 相关依赖
