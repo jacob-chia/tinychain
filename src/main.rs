@@ -38,7 +38,8 @@ enum SubCommand {
     },
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     env_logger::init();
 
     // 解析命令行参数
@@ -59,7 +60,7 @@ fn main() {
         } => {
             wallet::init_keystore_dir(&datadir);
             database::init_database_dir(&datadir);
-            node::run(&ip, port, &miner).unwrap();
+            node::run(&ip, port, &miner).await;
         }
     }
 }
