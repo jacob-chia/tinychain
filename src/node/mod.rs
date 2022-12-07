@@ -12,16 +12,20 @@ use crate::{database::*, utils};
 // 挖矿计算难度
 const MINING_DIFFICULTY: usize = 3;
 
-pub async fn run(_ip: &str, _port: u16, miner: &str) {
+pub async fn run(ip: &str, port: u16, miner: &str) -> Result<(), NodeError> {
     temp(miner);
 
     let app = Router::new().route("/", get(hello));
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    info!("Listening on {}", addr);
-    axum::Server::bind(&addr)
+
+    let addr = format!("{ip}:{port}");
+    let socket_addr: SocketAddr = addr.parse()?;
+    info!("Listening on {}", socket_addr);
+    axum::Server::bind(&socket_addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
+
+    Ok(())
 }
 
 async fn hello() -> Result<(), NodeError> {
@@ -29,7 +33,8 @@ async fn hello() -> Result<(), NodeError> {
 }
 
 // Make our own error that wraps `anyhow::Error`.
-struct NodeError(anyhow::Error);
+#[derive(Debug)]
+pub struct NodeError(anyhow::Error);
 
 // Tell axum how to convert `NodeError` into a response.
 impl IntoResponse for NodeError {

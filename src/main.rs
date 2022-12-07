@@ -60,7 +60,7 @@ async fn main() {
         } => {
             wallet::init_keystore_dir(&datadir);
             database::init_database_dir(&datadir);
-            node::run(&ip, port, &miner).await;
+            node::run(&ip, port, &miner).await.unwrap();
         }
     }
 }
