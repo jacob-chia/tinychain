@@ -22,7 +22,7 @@ src
 │   ├── state.rs   # 区块链的当前状态（所有账户的余额、Nonce，最新的区块，当前挖矿难度等）
 │   └── tx.rs      # Transaction相关
 ├── main.rs        # 入口。命令行解析，执行对应的命令
-├── node           # TODO 生成区块、Peers管理、Peers间的共识、区块同步等
+├── node           # 生成区块、Peers间区块同步、Http Server
 └── wallet         # 钱包。账户管理、签名、验签
 ```
 
