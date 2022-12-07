@@ -26,15 +26,15 @@ enum SubCommand {
         /// the node data dir where the DB will/is stored
         #[arg(short, long, default_value_t = String::from("./db/"))]
         datadir: String,
-        /// exposed IP for communication with peers
-        #[arg(short, long, default_value_t = String::from("127.0.0.1"))]
-        ip: String,
-        /// exposed HTTP port for communication with peers
-        #[arg(short, long, default_value_t = 8000)]
-        port: u16,
-        /// miner account of this node to receive block rewards
+        /// the exposed address for communication with peers
+        #[arg(short, long, default_value_t = String::from("127.0.0.1:8000"))]
+        addr: String,
+        /// the miner account of this node to receive block rewards
         #[arg(short, long)]
         miner: String,
+        /// the bootstraping node that provides initial information to newly joining nodes
+        #[arg(short, long, default_value_t = String::from("127.0.0.1:8000"))]
+        bootstrap_addr: String,
     },
 }
 
@@ -53,13 +53,13 @@ fn main() {
         }
         SubCommand::Run {
             datadir,
-            ip,
-            port,
+            addr,
             miner,
+            bootstrap_addr,
         } => {
             wallet::init_keystore_dir(&datadir);
             database::init_database_dir(&datadir);
-            node::run(&ip, port, &miner).unwrap();
+            node::run(&addr, &miner, &bootstrap_addr).unwrap();
         }
     }
 }
