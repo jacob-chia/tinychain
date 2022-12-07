@@ -9,7 +9,7 @@ const TREASURY: &'static str = "2bde5a91-6411-46ba-9173-c3e075d32100";
 const ALICE: &'static str = "3d211869-2505-4394-bd99-0c76eb761bf9";
 const BOB: &'static str = "16d5e01e-709a-4536-a4f2-9f069070c51a";
 
-pub fn run(_ip: &str, _port: u16, miner: &str) -> Result<()> {
+pub fn run(_addr: &str, miner: &str, _bootstrap_addr: &str) -> Result<()> {
     let mut state = State::new(MINING_DIFFICULTY)?;
 
     debug!("Accounts =========================================");
