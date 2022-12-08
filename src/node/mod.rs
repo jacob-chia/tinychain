@@ -1,6 +1,10 @@
 use axum::Server;
 use log::info;
-use std::{collections::HashMap, net::SocketAddr};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::{Arc, RwLock},
+};
 use tokio::signal;
 
 mod error;
@@ -11,7 +15,7 @@ use error::*;
 
 use crate::database::State;
 
-// 挖矿计算难度
+// 挖矿难度
 const MINING_DIFFICULTY: usize = 3;
 
 pub struct Node {
@@ -37,24 +41,22 @@ impl Node {
         })
     }
 
-    pub async fn run(&mut self) -> Result<(), NodeError> {
+    pub async fn run(self) {
         temp::temp(&self.miner);
 
-        info!("Current state =========================================");
+        let addr = self.addr;
+        info!("Listening on {addr}. Current state ====================");
         info!("balances         : {:?}", self.state.get_balances());
         info!("latest_block     : {:?}", self.state.latest_block());
         info!("latest_block_hash: {:?}", self.state.latest_block_hash());
 
-        let app = router::new_router();
+        let app = router::new_router(Arc::new(RwLock::new(self)));
 
-        info!("Listening on {}", self.addr);
-        Server::bind(&self.addr)
+        Server::bind(&addr)
             .serve(app.into_make_service())
             .with_graceful_shutdown(shutdown_signal())
             .await
             .unwrap();
-
-        Ok(())
     }
 }
 
