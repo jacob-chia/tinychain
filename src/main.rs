@@ -66,8 +66,7 @@ async fn main() {
             Node::new(&addr, &miner, &bootstrap_addr)
                 .unwrap()
                 .run()
-                .await
-                .unwrap();
+                .await;
         }
     }
 }
