@@ -6,6 +6,8 @@ mod node;
 mod utils;
 mod wallet;
 
+use node::Node;
+
 /// The command of tiny-chain
 #[derive(Debug, Parser)]
 struct Opts {
@@ -60,7 +62,12 @@ async fn main() {
         } => {
             wallet::init_keystore_dir(&datadir);
             database::init_database_dir(&datadir);
-            node::run(&addr, &miner, &bootstrap_addr).await.unwrap();
+
+            Node::new(&addr, &miner, &bootstrap_addr)
+                .unwrap()
+                .run()
+                .await
+                .unwrap();
         }
     }
 }
