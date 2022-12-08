@@ -1,6 +1,6 @@
 use axum::Server;
 use log::info;
-use std::net::SocketAddr;
+use std::{collections::HashMap, net::SocketAddr};
 use tokio::signal;
 
 mod error;
@@ -9,25 +9,53 @@ mod temp;
 
 use error::*;
 
+use crate::database::State;
+
 // 挖矿计算难度
 const MINING_DIFFICULTY: usize = 3;
 
-pub async fn run(_addr: &str, miner: &str, _bootstrap_addr: &str) -> Result<(), NodeError> {
-    temp::temp(miner);
+pub struct Node {
+    addr: SocketAddr,
+    miner: String,
+    state: Box<State>,
+    peers: HashMap<SocketAddr, Connected>,
+}
 
-    let app = router::new_router();
+struct Connected(bool);
 
-    let addr = format!("{ip}:{port}");
-    let socket_addr: SocketAddr = addr.parse()?;
-    info!("Listening on {}", socket_addr);
+impl Node {
+    pub fn new(addr: &str, miner: &str, bootstrap_addr: &str) -> Result<Self, NodeError> {
+        let state = Box::new(State::new(MINING_DIFFICULTY)?);
+        let mut peers = HashMap::new();
+        peers.insert(bootstrap_addr.parse()?, Connected(false));
 
-    Server::bind(&socket_addr)
-        .serve(app.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .unwrap();
+        Ok(Self {
+            addr: addr.parse()?,
+            miner: miner.to_string(),
+            state: state,
+            peers: peers,
+        })
+    }
 
-    Ok(())
+    pub async fn run(&mut self) -> Result<(), NodeError> {
+        temp::temp(&self.miner);
+
+        info!("Current state =========================================");
+        info!("balances         : {:?}", self.state.get_balances());
+        info!("latest_block     : {:?}", self.state.latest_block());
+        info!("latest_block_hash: {:?}", self.state.latest_block_hash());
+
+        let app = router::new_router();
+
+        info!("Listening on {}", self.addr);
+        Server::bind(&self.addr)
+            .serve(app.into_make_service())
+            .with_graceful_shutdown(shutdown_signal())
+            .await
+            .unwrap();
+
+        Ok(())
+    }
 }
 
 async fn shutdown_signal() {
