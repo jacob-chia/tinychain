@@ -51,6 +51,17 @@ pub fn get_blocks(offset: usize) -> Result<Vec<Block>> {
     Ok(lines)
 }
 
+pub fn get_block(number: u64) -> Option<Block> {
+    let db_path = BLOCKDB_PATH.get().unwrap();
+    let db = File::open(db_path).unwrap();
+
+    BufReader::new(db).lines().nth(number as usize).map(|line| {
+        let block_str = line.unwrap();
+        let mut block_kv: BlockKV = serde_json::from_str(&block_str).unwrap();
+        block_kv.take_block()
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

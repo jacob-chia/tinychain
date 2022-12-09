@@ -30,10 +30,12 @@
 
 #### 演示
 
-1. 获取指定number之后的所有区块（用于同步）
+1. 获取指定number之后的区块列表
 
 ```sh
 curl http://localhost:8000/blocks?offset=2 | jq
+
+curl http://localhost:8000/blocks/2 | jq
 ```
 
 #### 关键代码

@@ -23,11 +23,11 @@ type ArcNode = Arc<RwLock<Node>>;
 pub fn new_router(node: ArcNode) -> Router {
     Router::new()
         .route("/blocks", get(get_blocks))
-        .route("/blocks/:number_or_hash", get(get_block))
-        .route("/balances", get(get_balances))
+        .route("/blocks/:number", get(get_block))
         .route("/txs", post(add_tx))
         .route("/peers", post(add_peer))
         .route("/node/status", get(get_node_status))
+        .route("/balances", get(get_balances))
         .fallback(not_found.into_service())
         .layer(
             ServiceBuilder::new()
@@ -64,8 +64,11 @@ async fn get_blocks(Query(params): Query<GetBlocksReq>) -> impl IntoResponse {
     }
 }
 
-async fn get_block() -> impl IntoResponse {
-    todo!()
+async fn get_block(Path(number): Path<u64>) -> Result<impl IntoResponse, StatusCode> {
+    match database::get_block(number) {
+        Some(block) => Ok(Json(block)),
+        None => Err(StatusCode::NOT_FOUND),
+    }
 }
 
 async fn get_balances() -> impl IntoResponse {
