@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -12,6 +13,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use ethers_core::types::H256;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use tower::{BoxError, ServiceBuilder};
@@ -69,8 +71,19 @@ async fn get_block(Path(number): Path<u64>) -> Result<impl IntoResponse, StatusC
     Ok(Json(block))
 }
 
+#[derive(Debug, Serialize)]
+struct BalancesResp {
+    hash: H256,
+    balances: HashMap<String, u64>,
+}
+
 async fn get_balances(Extension(node): Extension<ArcNode>) -> impl IntoResponse {
-    Json(node.read().unwrap().state.get_balances())
+    let state = &node.read().unwrap().state;
+
+    Json(BalancesResp {
+        hash: state.latest_block_hash(),
+        balances: state.get_balances(),
+    })
 }
 
 async fn add_tx() -> impl IntoResponse {
