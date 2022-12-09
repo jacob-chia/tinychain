@@ -1,16 +1,26 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 
 use axum::{
+    error_handling::HandleErrorLayer,
+    extract::{Extension, Path, Query},
     handler::Handler,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Router,
+    Json, Router,
 };
+use log::{error, info};
+use serde::{Deserialize, Serialize};
+use tower::{BoxError, ServiceBuilder};
 
-use super::{error::*, Node};
+use super::{database, error::*, Node};
 
-pub fn new_router(node: Arc<RwLock<Node>>) -> Router {
+type ArcNode = Arc<RwLock<Node>>;
+
+pub fn new_router(node: ArcNode) -> Router {
     Router::new()
         .route("/blocks", get(get_blocks))
         .route("/blocks/:number_or_hash", get(get_block))
@@ -19,30 +29,59 @@ pub fn new_router(node: Arc<RwLock<Node>>) -> Router {
         .route("/peers", post(add_peer))
         .route("/node/status", get(get_node_status))
         .fallback(not_found.into_service())
+        .layer(
+            ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(handle_error_layer))
+                .timeout(Duration::from_secs(10))
+                .layer(Extension(node))
+                .into_inner(),
+        )
 }
 
-async fn get_blocks() -> Result<(), NodeError> {
-    Ok(())
+async fn handle_error_layer(err: BoxError) -> (StatusCode, String) {
+    if err.is::<tower::timeout::error::Elapsed>() {
+        (StatusCode::REQUEST_TIMEOUT, "Timeout".to_string())
+    } else {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Unknown error: {}", err),
+        )
+    }
 }
 
-async fn get_block() -> Result<(), NodeError> {
-    Ok(())
+#[derive(Debug, Deserialize)]
+struct GetBlocksReq {
+    offset: usize,
 }
 
-async fn get_balances() -> Result<(), NodeError> {
-    Ok(())
+async fn get_blocks(Query(params): Query<GetBlocksReq>) -> impl IntoResponse {
+    match database::get_blocks(params.offset) {
+        Ok(blocks) => Json(blocks),
+        Err(err) => {
+            error!("Read db error: {}", err);
+            Json(vec![])
+        }
+    }
 }
 
-async fn add_tx() -> Result<(), NodeError> {
-    Ok(())
+async fn get_block() -> impl IntoResponse {
+    todo!()
 }
 
-async fn add_peer() -> Result<(), NodeError> {
-    Ok(())
+async fn get_balances() -> impl IntoResponse {
+    todo!()
 }
 
-async fn get_node_status() -> Result<(), NodeError> {
-    Ok(())
+async fn add_tx() -> impl IntoResponse {
+    todo!()
+}
+
+async fn add_peer() -> impl IntoResponse {
+    todo!()
+}
+
+async fn get_node_status() -> impl IntoResponse {
+    todo!()
 }
 
 async fn not_found() -> impl IntoResponse {

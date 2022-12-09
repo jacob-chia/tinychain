@@ -1,5 +1,5 @@
 use axum::Server;
-use log::info;
+use log::{error, info};
 use std::{
     collections::HashMap,
     net::SocketAddr,
@@ -13,11 +13,12 @@ mod temp;
 
 use error::*;
 
-use crate::database::State;
+use crate::database::{self, Block, State};
 
 // 挖矿难度
 const MINING_DIFFICULTY: usize = 3;
 
+#[derive(Debug)]
 pub struct Node {
     addr: SocketAddr,
     miner: String,
@@ -25,6 +26,7 @@ pub struct Node {
     peers: HashMap<SocketAddr, Connected>,
 }
 
+#[derive(Debug)]
 struct Connected(bool);
 
 impl Node {
@@ -45,7 +47,8 @@ impl Node {
         temp::temp(&self.miner);
 
         let addr = self.addr;
-        info!("Listening on {addr}. Current state ====================");
+        info!("Listening on {addr}");
+        info!("Current state =====================================");
         info!("balances         : {:?}", self.state.get_balances());
         info!("latest_block     : {:?}", self.state.latest_block());
         info!("latest_block_hash: {:?}", self.state.latest_block_hash());
