@@ -54,8 +54,8 @@ impl State {
         &self.latest_block
     }
 
-    pub fn latest_block_hash(&self) -> &H256 {
-        &self.latest_block_hash
+    pub fn latest_block_hash(&self) -> H256 {
+        self.latest_block_hash
     }
 
     pub fn add_block(&mut self, block: Block) -> Result<H256> {
