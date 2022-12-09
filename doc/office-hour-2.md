@@ -36,6 +36,7 @@
 curl http://localhost:8000/blocks?offset=2 | jq
 
 curl http://localhost:8000/blocks/2 | jq
+curl http://localhost:8000/balances | jq
 ```
 
 #### 关键代码

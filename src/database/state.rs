@@ -34,8 +34,8 @@ impl State {
         Ok(state)
     }
 
-    pub fn get_balances(&self) -> &HashMap<String, u64> {
-        &self.balances
+    pub fn get_balances(&self) -> HashMap<String, u64> {
+        self.balances.clone()
     }
 
     pub fn next_block_number(&self) -> u64 {
