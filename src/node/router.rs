@@ -24,10 +24,10 @@ pub fn new_router(node: ArcNode) -> Router {
     Router::new()
         .route("/blocks", get(get_blocks))
         .route("/blocks/:number", get(get_block))
+        .route("/balances", get(get_balances))
         .route("/txs", post(add_tx))
         .route("/peers", post(add_peer))
         .route("/node/status", get(get_node_status))
-        .route("/balances", get(get_balances))
         .fallback(not_found.into_service())
         .layer(
             ServiceBuilder::new()
@@ -65,14 +65,12 @@ async fn get_blocks(Query(params): Query<GetBlocksReq>) -> impl IntoResponse {
 }
 
 async fn get_block(Path(number): Path<u64>) -> Result<impl IntoResponse, StatusCode> {
-    match database::get_block(number) {
-        Some(block) => Ok(Json(block)),
-        None => Err(StatusCode::NOT_FOUND),
-    }
+    let block = database::get_block(number).ok_or(StatusCode::NOT_FOUND)?;
+    Ok(Json(block))
 }
 
-async fn get_balances() -> impl IntoResponse {
-    todo!()
+async fn get_balances(Extension(node): Extension<ArcNode>) -> impl IntoResponse {
+    Json(node.read().unwrap().state.get_balances())
 }
 
 async fn add_tx() -> impl IntoResponse {
