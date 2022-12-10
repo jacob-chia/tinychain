@@ -1,4 +1,3 @@
-use anyhow::Result;
 use serde::Deserialize;
 use std::{
     collections::HashMap,
@@ -7,6 +6,7 @@ use std::{
 };
 
 use super::{BLOCKDB_PATH, DATABASE_DIR, GENESIS_PATH};
+use crate::error::ChainError;
 
 const GENESIS_DATA: &str = r#"{
 	"symbol": "TCH",
@@ -22,7 +22,7 @@ pub struct Genesis {
 }
 
 impl Genesis {
-    pub fn load() -> Result<Self> {
+    pub fn load() -> Result<Self, ChainError> {
         init_genesis_if_not_exists()?;
         let genesis: Self = serde_json::from_str(GENESIS_DATA)?;
         Ok(genesis)
@@ -33,7 +33,7 @@ impl Genesis {
     }
 }
 
-fn init_genesis_if_not_exists() -> Result<()> {
+fn init_genesis_if_not_exists() -> Result<(), ChainError> {
     let database_dir = DATABASE_DIR.get().unwrap();
     let genesis_path = GENESIS_PATH.get().unwrap();
     if Path::new(genesis_path).exists() {
