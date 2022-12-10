@@ -21,7 +21,7 @@ use tower::{BoxError, ServiceBuilder};
 
 use crate::database::SignedTx;
 
-use super::{database, error::*, Node};
+use super::{database, Node};
 
 type ArcNode = Arc<RwLock<Node>>;
 

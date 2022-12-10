@@ -8,12 +8,12 @@ use std::{
 };
 use tokio::signal;
 
-mod error;
 mod router;
 
-use error::*;
-
-use crate::database::{self, Block, SignedTx, State, Tx};
+use crate::{
+    database::{self, Block, SignedTx, State, Tx},
+    error::ChainError,
+};
 
 // 挖矿难度
 const MINING_DIFFICULTY: usize = 3;
@@ -28,7 +28,7 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(addr: &str, miner: &str, bootstrap_addr: &str) -> Result<Self, NodeError> {
+    pub fn new(addr: &str, miner: &str, bootstrap_addr: &str) -> Result<Self, ChainError> {
         let mut node = Self {
             addr: addr.parse()?,
             miner: miner.to_string(),
