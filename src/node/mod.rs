@@ -84,7 +84,7 @@ impl Node {
     }
 
     fn add_pending_tx(&mut self, tx: SignedTx, from_peer: SocketAddr) {
-        if !tx.is_valid_signature() {
+        if tx.check_signature().is_err() {
             return;
         }
 

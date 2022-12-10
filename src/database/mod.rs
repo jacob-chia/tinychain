@@ -1,8 +1,10 @@
-use anyhow::Result;
+use once_cell::sync::OnceCell;
 use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
+
+use crate::error::ChainError;
 
 mod block;
 mod genesis;
@@ -13,8 +15,6 @@ pub use block::*;
 pub use genesis::*;
 pub use state::*;
 pub use tx::*;
-
-use once_cell::sync::OnceCell;
 
 static DATABASE_DIR: OnceCell<String> = OnceCell::new();
 static GENESIS_PATH: OnceCell<String> = OnceCell::new();
@@ -34,7 +34,7 @@ pub fn init_database_dir(datadir: &str) {
     BLOCKDB_PATH.get_or_init(|| blockdb_path);
 }
 
-pub fn get_blocks(offset: usize) -> Result<Vec<Block>> {
+pub fn get_blocks(offset: usize) -> Result<Vec<Block>, ChainError> {
     let db_path = BLOCKDB_PATH.get().unwrap();
     let db = File::open(db_path)?;
 

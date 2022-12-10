@@ -1,9 +1,7 @@
-use ethers_core::types::H256;
 use ethers_core::utils::hash_message;
 use serde::{Deserialize, Serialize};
 
-use crate::utils;
-use crate::wallet;
+use crate::{error::ChainError, types::Hash, utils, wallet};
 
 const GAS: u64 = 21;
 const GAS_PRICE: u64 = 1;
@@ -36,7 +34,7 @@ impl Tx {
         serde_json::to_string(self).unwrap()
     }
 
-    pub fn hash(&self) -> H256 {
+    pub fn hash(&self) -> Hash {
         hash_message(self.encode())
     }
 
@@ -95,15 +93,15 @@ pub struct SignedTx {
 }
 
 impl SignedTx {
-    pub fn is_valid_signature(&self) -> bool {
-        wallet::verify(&self.tx.encode(), &self.sig, &self.tx.from).is_ok()
+    pub fn check_signature(&self) -> Result<(), ChainError> {
+        wallet::verify(&self.tx.encode(), &self.sig, &self.tx.from)
     }
 
     pub fn gas_cost(&self) -> u64 {
         self.tx.gas_cost()
     }
 
-    pub fn hash(&self) -> H256 {
+    pub fn hash(&self) -> Hash {
         self.tx.hash()
     }
 }
