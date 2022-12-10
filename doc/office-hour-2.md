@@ -37,6 +37,13 @@ curl http://localhost:8000/blocks?offset=2 | jq
 
 curl http://localhost:8000/blocks/2 | jq
 curl http://localhost:8000/balances | jq
+
+curl -X POST http://localhost:8000/txs \
+  -H "Content-Type: application/json" \
+
+curl -X POST 'http://localhost:8000/txs' \
+  -H 'Content-Type: application/json' \
+  -d '{"from": "3d211869-2505-4394-bd99-0c76eb761bf9", "to": "16d5e01e-709a-4536-a4f2-9f069070c51a", "value": 50}'
 ```
 
 #### 关键代码

@@ -1,4 +1,5 @@
 use axum::Server;
+use ethers_core::types::H256;
 use log::{error, info};
 use std::{
     collections::HashMap,
@@ -9,11 +10,10 @@ use tokio::signal;
 
 mod error;
 mod router;
-mod temp;
 
 use error::*;
 
-use crate::database::{self, Block, State};
+use crate::database::{self, Block, SignedTx, State, Tx};
 
 // 挖矿难度
 const MINING_DIFFICULTY: usize = 3;
@@ -23,6 +23,7 @@ pub struct Node {
     addr: SocketAddr,
     miner: String,
     state: Box<State>,
+    pending_txs: HashMap<H256, SignedTx>,
     peers: HashMap<SocketAddr, Connected>,
 }
 
@@ -39,13 +40,12 @@ impl Node {
             addr: addr.parse()?,
             miner: miner.to_string(),
             state: state,
+            pending_txs: HashMap::new(),
             peers: peers,
         })
     }
 
     pub async fn run(self) {
-        temp::temp(&self.miner);
-
         let addr = self.addr;
         info!("Listening on {addr}");
         info!("Current state =====================================");
@@ -60,6 +60,28 @@ impl Node {
             .with_graceful_shutdown(shutdown_signal())
             .await
             .unwrap();
+    }
+
+    pub fn add_tx(&mut self, from: &str, to: &str, value: u64) {
+        let next_nonce = self.state.next_account_nonce(from);
+        let tx = Tx::builder()
+            .from(from)
+            .to(to)
+            .value(value)
+            .nonce(next_nonce)
+            .build()
+            .sign();
+
+        self.add_pending_tx(tx, self.addr);
+    }
+
+    fn add_pending_tx(&mut self, tx: SignedTx, from_peer: SocketAddr) {
+        if !tx.is_valid_signature() {
+            return;
+        }
+
+        info!("Added pending tx {:?} from peer {}", tx, from_peer);
+        self.pending_txs.entry(tx.hash()).or_insert(tx);
     }
 }
 

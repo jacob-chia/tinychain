@@ -1,3 +1,5 @@
+use ethers_core::types::H256;
+use ethers_core::utils::hash_message;
 use serde::{Deserialize, Serialize};
 
 use crate::utils;
@@ -32,6 +34,10 @@ impl Tx {
 
     pub fn encode(&self) -> String {
         serde_json::to_string(self).unwrap()
+    }
+
+    pub fn hash(&self) -> H256 {
+        hash_message(self.encode())
     }
 
     pub fn sign(self) -> SignedTx {
@@ -95,6 +101,10 @@ impl SignedTx {
 
     pub fn gas_cost(&self) -> u64 {
         self.tx.gas_cost()
+    }
+
+    pub fn hash(&self) -> H256 {
+        self.tx.hash()
     }
 }
 
