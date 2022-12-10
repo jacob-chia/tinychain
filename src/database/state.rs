@@ -58,6 +58,14 @@ impl State {
         self.latest_block_hash
     }
 
+    pub fn latest_block_number(&self) -> u64 {
+        if self.has_blocks {
+            return self.latest_block.header.number;
+        }
+
+        0
+    }
+
     pub fn add_block(&mut self, block: Block) -> Result<H256> {
         // 为什么需要clone？
         // 当中间过程出错时，state需要回滚状态
