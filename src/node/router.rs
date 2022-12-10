@@ -1,5 +1,6 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
+    net::SocketAddr,
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -18,6 +19,8 @@ use log::{error, info};
 use serde::{Deserialize, Serialize};
 use tower::{BoxError, ServiceBuilder};
 
+use crate::database::SignedTx;
+
 use super::{database, error::*, Node};
 
 type ArcNode = Arc<RwLock<Node>>;
@@ -29,7 +32,7 @@ pub fn new_router(node: ArcNode) -> Router {
         .route("/balances", get(get_balances))
         .route("/txs", post(add_tx))
         .route("/peers", post(add_peer))
-        .route("/node/status", get(get_node_status))
+        .route("/peer/status", get(get_peer_status))
         .fallback(not_found.into_service())
         .layer(
             ServiceBuilder::new()
@@ -102,12 +105,36 @@ async fn add_tx(
     (StatusCode::OK, "OK")
 }
 
-async fn add_peer() -> impl IntoResponse {
-    todo!()
+#[derive(Debug, Deserialize)]
+struct AddPeerReq {
+    addr: String,
 }
 
-async fn get_node_status() -> impl IntoResponse {
-    todo!()
+async fn add_peer(
+    Json(peer): Json<AddPeerReq>,
+    Extension(node): Extension<ArcNode>,
+) -> impl IntoResponse {
+    node.write().unwrap().add_peer(&peer.addr);
+
+    (StatusCode::OK, "OK")
+}
+
+#[derive(Debug, Serialize)]
+struct PeerStatusResp {
+    hash: H256,
+    number: u64,
+    peers: HashSet<SocketAddr>,
+    pending_txs: Vec<SignedTx>,
+}
+
+async fn get_peer_status(Extension(node): Extension<ArcNode>) -> impl IntoResponse {
+    let node = node.read().unwrap();
+    Json(PeerStatusResp {
+        hash: node.state.latest_block_hash(),
+        number: node.state.latest_block_number(),
+        peers: node.peers.clone(),
+        pending_txs: node.get_pending_txs(),
+    })
 }
 
 async fn not_found() -> impl IntoResponse {

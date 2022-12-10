@@ -2,7 +2,7 @@ use axum::Server;
 use ethers_core::types::H256;
 use log::{error, info};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     net::SocketAddr,
     sync::{Arc, RwLock},
 };
@@ -24,25 +24,22 @@ pub struct Node {
     miner: String,
     state: Box<State>,
     pending_txs: HashMap<H256, SignedTx>,
-    peers: HashMap<SocketAddr, Connected>,
+    peers: HashSet<SocketAddr>,
 }
-
-#[derive(Debug)]
-struct Connected(bool);
 
 impl Node {
     pub fn new(addr: &str, miner: &str, bootstrap_addr: &str) -> Result<Self, NodeError> {
-        let state = Box::new(State::new(MINING_DIFFICULTY)?);
-        let mut peers = HashMap::new();
-        peers.insert(bootstrap_addr.parse()?, Connected(false));
-
-        Ok(Self {
+        let mut node = Self {
             addr: addr.parse()?,
             miner: miner.to_string(),
-            state: state,
+            state: Box::new(State::new(MINING_DIFFICULTY)?),
             pending_txs: HashMap::new(),
-            peers: peers,
-        })
+            peers: HashSet::new(),
+        };
+
+        node.connect_to_peer(bootstrap_addr);
+
+        Ok(node)
     }
 
     pub async fn run(self) {
@@ -75,6 +72,17 @@ impl Node {
         self.add_pending_tx(tx, self.addr);
     }
 
+    pub fn add_peer(&mut self, peer: &str) {
+        self.peers.insert(peer.parse().unwrap());
+    }
+
+    pub fn get_pending_txs(&self) -> Vec<SignedTx> {
+        self.pending_txs
+            .iter()
+            .map(|(_, tx)| tx.clone())
+            .collect::<Vec<SignedTx>>()
+    }
+
     fn add_pending_tx(&mut self, tx: SignedTx, from_peer: SocketAddr) {
         if !tx.is_valid_signature() {
             return;
@@ -82,6 +90,15 @@ impl Node {
 
         info!("Added pending tx {:?} from peer {}", tx, from_peer);
         self.pending_txs.entry(tx.hash()).or_insert(tx);
+    }
+
+    fn connect_to_peer(&mut self, peer: &str) {
+        if peer == self.addr.to_string() {
+            return;
+        }
+
+        // if add peer ok
+        self.add_peer(peer);
     }
 }
 
