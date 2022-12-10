@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::mem;
 
 use super::SignedTx;
+use crate::types::Hash;
 
 const BLOCK_REWORD: u64 = 100;
 

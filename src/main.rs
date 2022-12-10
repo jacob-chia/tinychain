@@ -2,7 +2,9 @@ use clap::{Parser, Subcommand};
 use log::info;
 
 mod database;
+mod error;
 mod node;
+mod types;
 mod utils;
 mod wallet;
 
