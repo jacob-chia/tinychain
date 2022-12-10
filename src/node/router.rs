@@ -36,14 +36,14 @@ pub fn new_router(node: ArcNode) -> Router {
         .fallback(not_found.into_service())
         .layer(
             ServiceBuilder::new()
-                .layer(HandleErrorLayer::new(handle_error_layer))
+                .layer(HandleErrorLayer::new(handle_timeout_error))
                 .timeout(Duration::from_secs(10))
                 .layer(Extension(node))
                 .into_inner(),
         )
 }
 
-async fn handle_error_layer(err: BoxError) -> (StatusCode, String) {
+async fn handle_timeout_error(err: BoxError) -> (StatusCode, String) {
     if err.is::<tower::timeout::error::Elapsed>() {
         (StatusCode::REQUEST_TIMEOUT, "Timeout".to_string())
     } else {
