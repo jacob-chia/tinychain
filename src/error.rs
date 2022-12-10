@@ -1,3 +1,5 @@
+use std::net::AddrParseError;
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -12,8 +14,8 @@ use crate::types::Hash;
 #[derive(Error, Debug)]
 pub enum ChainError {
     // 400
-    #[error("Invalid peer address: {0}")]
-    InvalidPeerAddress(String),
+    #[error("Invalid peer address")]
+    InvalidPeerAddress(#[from] AddrParseError),
     #[error("Invalid block number: expected '{0}', not '{0}'")]
     InvalidBlockNumber(u64, u64),
     #[error("Invalid block parent: expected '{0}', not '{0}'")]
@@ -37,7 +39,7 @@ pub enum ChainError {
 
     // 500
     #[error("Failed to encode/decode message")]
-    SerdeError(#[from] serde_json::Error),
+    JsonError(#[from] serde_json::Error),
     #[error("Failed to access db")]
     DbError(#[from] std::io::Error),
     #[error("Unknown error: {0}")]
@@ -48,16 +50,13 @@ pub enum ChainError {
 impl IntoResponse for ChainError {
     fn into_response(self) -> Response {
         let (status, msg) = match self {
-            ChainError::InvalidPeerAddress(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            ChainError::InvalidBlockNumber(_, _) => (StatusCode::BAD_REQUEST, self.to_string()),
-            ChainError::InvalidBlockParent(_, _) => (StatusCode::BAD_REQUEST, self.to_string()),
-            ChainError::InvalidBlockHash(_, _) => (StatusCode::BAD_REQUEST, self.to_string()),
-            ChainError::InvalidTxSignature(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            ChainError::InvalidTxNonce(_, _) => (StatusCode::BAD_REQUEST, self.to_string()),
             ChainError::InsufficientBalance(_, _) => (StatusCode::FORBIDDEN, self.to_string()),
             ChainError::AccountNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
             ChainError::BlockNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            ChainError::JsonError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            ChainError::DbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            ChainError::Unknown(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            _ => (StatusCode::BAD_REQUEST, self.to_string()),
         };
 
         let body = Json(json!({ "error": msg }));
