@@ -86,8 +86,20 @@ async fn get_balances(Extension(node): Extension<ArcNode>) -> impl IntoResponse 
     })
 }
 
-async fn add_tx() -> impl IntoResponse {
-    todo!()
+#[derive(Debug, Deserialize)]
+struct AddTxReq {
+    from: String,
+    to: String,
+    value: u64,
+}
+
+async fn add_tx(
+    Json(tx): Json<AddTxReq>,
+    Extension(node): Extension<ArcNode>,
+) -> impl IntoResponse {
+    node.write().unwrap().add_tx(&tx.from, &tx.to, tx.value);
+
+    (StatusCode::OK, "OK")
 }
 
 async fn add_peer() -> impl IntoResponse {
