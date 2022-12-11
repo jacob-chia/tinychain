@@ -45,14 +45,15 @@ impl OkResp {
 
 #[derive(Debug, Deserialize)]
 struct GetBlocksReq {
-    from_height: usize,
+    offset: usize,
 }
 
 async fn get_blocks(
     Query(params): Query<GetBlocksReq>,
     Extension(node): Extension<ArcNode>,
-) -> impl IntoResponse {
-    Json(node.read().unwrap().get_blocks(params.from_height))
+) -> Result<impl IntoResponse, ChainError> {
+    let blocks = node.read().unwrap().get_blocks(params.offset)?;
+    Ok(Json(blocks))
 }
 
 async fn get_block(

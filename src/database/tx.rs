@@ -38,9 +38,9 @@ impl Tx {
         hash_message(self.encode())
     }
 
-    pub fn sign(self) -> SignedTx {
-        let sig = wallet::sign(&self.encode(), &self.from).unwrap();
-        SignedTx { tx: self, sig: sig }
+    pub fn sign(self) -> Result<SignedTx, ChainError> {
+        let sig = wallet::sign(&self.encode(), &self.from)?;
+        Ok(SignedTx { tx: self, sig: sig })
     }
 }
 

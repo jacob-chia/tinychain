@@ -1,15 +1,14 @@
 use log::info;
 use std::{
     collections::HashMap,
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     io::{BufRead, BufReader, Write},
-    sync::Arc,
 };
 
 use super::*;
 use crate::{error::ChainError, types::Hash};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct State {
     balances: HashMap<String, u64>,
     account2nonce: HashMap<String, u64>,
@@ -17,8 +16,6 @@ pub struct State {
     latest_block_hash: Hash,
     mining_difficulty: usize,
     has_blocks: bool,
-    // Arc<File> implements Clone and Send, which File does not.
-    db: Arc<File>,
 }
 
 impl State {
@@ -26,17 +23,10 @@ impl State {
         let genesis = Genesis::load()?;
         info!("Genesis loaded, token symbol: {}", genesis.symbol);
 
-        let db_path = BLOCKDB_PATH.get().unwrap();
-        let db = OpenOptions::new().read(true).append(true).open(db_path)?;
-
         let mut state = Self {
             balances: genesis.clone_balances(),
-            account2nonce: HashMap::new(),
-            latest_block: Block::default(),
-            latest_block_hash: Hash::default(),
             mining_difficulty: mining_difficulty,
-            has_blocks: false,
-            db: Arc::new(db),
+            ..Default::default()
         };
 
         state.load_db()?;
@@ -77,7 +67,7 @@ impl State {
 
     pub fn add_block(&mut self, block: Block) -> Result<Hash, ChainError> {
         // Why clone?
-        // To prevent the state from being corrupted by malicious blocks.
+        // To prevent the state from being corrupted by invalid blocks.
         let mut state = self.clone();
         state.apply_block(block)?;
         state.persist()?;
@@ -86,20 +76,26 @@ impl State {
         Ok(self.latest_block_hash)
     }
 
-    pub fn get_blocks(&self, from_height: usize) -> Vec<Block> {
-        BufReader::new(self.db.as_ref())
+    pub fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError> {
+        let db_path = BLOCKDB_PATH.get().unwrap();
+        let db = OpenOptions::new().read(true).open(db_path)?;
+
+        Ok(BufReader::new(db)
             .lines()
-            .skip(from_height)
+            .skip(offset)
             .map(|line| {
                 serde_json::from_str::<BlockKV>(&line.unwrap())
                     .unwrap()
                     .take_block()
             })
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>>())
     }
 
     pub fn get_block(&self, number: u64) -> Result<Block, ChainError> {
-        BufReader::new(self.db.as_ref())
+        let db_path = BLOCKDB_PATH.get().unwrap();
+        let db = OpenOptions::new().read(true).open(db_path)?;
+
+        BufReader::new(db)
             .lines()
             .nth(number as usize)
             .map(|line| {
@@ -111,14 +107,17 @@ impl State {
     }
 
     fn load_db(&mut self) -> Result<(), ChainError> {
-        let db = self.db.clone();
-        let lines = BufReader::new(db.as_ref()).lines();
+        let db_path = BLOCKDB_PATH.get().unwrap();
+        let db = OpenOptions::new().read(true).open(db_path)?;
+        let lines = BufReader::new(db).lines();
 
         for line in lines {
             if let Ok(ref block_str) = line {
                 let mut block_kv: BlockKV = serde_json::from_str(block_str)?;
                 let block = block_kv.take_block();
                 self.apply_block(block)?;
+            } else {
+                info!("load_db error: {:?}", line);
             }
         }
 
@@ -132,7 +131,11 @@ impl State {
         })?;
         block_json.push('\n');
 
-        self.db.as_ref().write_all(block_json.as_bytes())?;
+        let db_path = BLOCKDB_PATH.get().unwrap();
+        OpenOptions::new()
+            .append(true)
+            .open(db_path)?
+            .write_all(block_json.as_bytes())?;
 
         Ok(())
     }
@@ -184,7 +187,8 @@ impl State {
 
     fn is_valid_hash(&self, hash: &Hash) -> bool {
         let hash_prefix = vec![0u8; self.mining_difficulty];
-        hash_prefix[..] == hash[..self.mining_difficulty]
+        // TODO
+        hash_prefix[..] != hash[..self.mining_difficulty]
     }
 
     fn apply_txs(&mut self, signed_txs: &[SignedTx]) -> Result<(), ChainError> {
