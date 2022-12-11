@@ -3,12 +3,13 @@ use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, Write},
+    sync::Arc,
 };
 
 use super::*;
 use crate::{error::ChainError, types::Hash};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct State {
     balances: HashMap<String, u64>,
     account2nonce: HashMap<String, u64>,
@@ -16,6 +17,8 @@ pub struct State {
     latest_block_hash: Hash,
     mining_difficulty: usize,
     has_blocks: bool,
+    // Arc<File> implements Clone and Send, which File does not.
+    db: Arc<File>,
 }
 
 impl State {
@@ -23,10 +26,17 @@ impl State {
         let genesis = Genesis::load()?;
         info!("Genesis loaded, token symbol: {}", genesis.symbol);
 
+        let db_path = BLOCKDB_PATH.get().unwrap();
+        let db = OpenOptions::new().read(true).append(true).open(db_path)?;
+
         let mut state = Self {
             balances: genesis.clone_balances(),
+            account2nonce: HashMap::new(),
+            latest_block: Block::default(),
+            latest_block_hash: Hash::default(),
             mining_difficulty: mining_difficulty,
-            ..Default::default()
+            has_blocks: false,
+            db: Arc::new(db),
         };
 
         state.load_db()?;
@@ -66,6 +76,8 @@ impl State {
     }
 
     pub fn add_block(&mut self, block: Block) -> Result<Hash, ChainError> {
+        // Why clone?
+        // To prevent the state from being corrupted by malicious blocks.
         let mut state = self.clone();
         state.apply_block(block)?;
         state.persist()?;
@@ -74,10 +86,33 @@ impl State {
         Ok(self.latest_block_hash)
     }
 
+    pub fn get_blocks(&self, from_height: usize) -> Vec<Block> {
+        BufReader::new(self.db.as_ref())
+            .lines()
+            .skip(from_height)
+            .map(|line| {
+                serde_json::from_str::<BlockKV>(&line.unwrap())
+                    .unwrap()
+                    .take_block()
+            })
+            .collect::<Vec<_>>()
+    }
+
+    pub fn get_block(&self, number: u64) -> Result<Block, ChainError> {
+        BufReader::new(self.db.as_ref())
+            .lines()
+            .nth(number as usize)
+            .map(|line| {
+                serde_json::from_str::<BlockKV>(&line.unwrap())
+                    .unwrap()
+                    .take_block()
+            })
+            .ok_or(ChainError::BlockNotFound(number))
+    }
+
     fn load_db(&mut self) -> Result<(), ChainError> {
-        let db_path = BLOCKDB_PATH.get().unwrap();
-        let db = File::open(db_path)?;
-        let lines = BufReader::new(db).lines();
+        let db = self.db.clone();
+        let lines = BufReader::new(db.as_ref()).lines();
 
         for line in lines {
             if let Ok(ref block_str) = line {
@@ -90,18 +125,14 @@ impl State {
         Ok(())
     }
 
-    fn persist(&self) -> Result<(), ChainError> {
+    fn persist(&mut self) -> Result<(), ChainError> {
         let mut block_json = serde_json::to_string(&BlockKV {
             key: self.latest_block_hash,
             value: self.latest_block.clone(),
         })?;
         block_json.push('\n');
 
-        let db_path = BLOCKDB_PATH.get().unwrap();
-        OpenOptions::new()
-            .append(true)
-            .open(db_path)?
-            .write_all(block_json.as_bytes())?;
+        self.db.as_ref().write_all(block_json.as_bytes())?;
 
         Ok(())
     }
@@ -170,7 +201,6 @@ impl State {
     }
 
     fn check_tx(&self, signed_tx: &SignedTx) -> Result<(), ChainError> {
-        // check signature
         signed_tx.check_signature()?;
 
         let tx = &signed_tx.tx;

@@ -1,10 +1,4 @@
 use once_cell::sync::OnceCell;
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-};
-
-use crate::error::ChainError;
 
 mod block;
 mod genesis;
@@ -32,34 +26,6 @@ pub fn init_database_dir(datadir: &str) {
     DATABASE_DIR.get_or_init(|| dir);
     GENESIS_PATH.get_or_init(|| genesis_path);
     BLOCKDB_PATH.get_or_init(|| blockdb_path);
-}
-
-pub fn get_blocks(offset: usize) -> Result<Vec<Block>, ChainError> {
-    let db_path = BLOCKDB_PATH.get().unwrap();
-    let db = File::open(db_path)?;
-
-    let lines = BufReader::new(db)
-        .lines()
-        .skip(offset)
-        .map(|line| {
-            let block_str = line.unwrap();
-            let mut block_kv: BlockKV = serde_json::from_str(&block_str).unwrap();
-            block_kv.take_block()
-        })
-        .collect::<Vec<_>>();
-
-    Ok(lines)
-}
-
-pub fn get_block(number: u64) -> Option<Block> {
-    let db_path = BLOCKDB_PATH.get().unwrap();
-    let db = File::open(db_path).unwrap();
-
-    BufReader::new(db).lines().nth(number as usize).map(|line| {
-        let block_str = line.unwrap();
-        let mut block_kv: BlockKV = serde_json::from_str(&block_str).unwrap();
-        block_kv.take_block()
-    })
 }
 
 #[cfg(test)]
