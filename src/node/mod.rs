@@ -63,7 +63,7 @@ impl Node {
             .value(value)
             .nonce(next_nonce)
             .build()
-            .sign();
+            .sign()?;
 
         self.add_pending_tx(tx, self.addr)
     }
@@ -81,8 +81,8 @@ impl Node {
         Ok(())
     }
 
-    pub fn get_blocks(&self, from_height: usize) -> Vec<Block> {
-        self.state.get_blocks(from_height)
+    pub fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError> {
+        self.state.get_blocks(offset)
     }
 
     pub fn get_block(&self, number: u64) -> Result<Block, ChainError> {

@@ -42,8 +42,6 @@ pub enum ChainError {
     JsonError(#[from] serde_json::Error),
     #[error("Failed to access db")]
     DbError(#[from] std::io::Error),
-    #[error("Unknown error: {0}")]
-    Unknown(String),
 }
 
 // Tell axum how to convert `ChainError` into a response.
@@ -55,7 +53,6 @@ impl IntoResponse for ChainError {
             ChainError::BlockNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
             ChainError::JsonError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             ChainError::DbError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
-            ChainError::Unknown(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             _ => (StatusCode::BAD_REQUEST, self.to_string()),
         };
 
