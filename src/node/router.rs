@@ -2,11 +2,9 @@ use std::{
     collections::{HashMap, HashSet},
     net::SocketAddr,
     sync::{Arc, RwLock},
-    time::Duration,
 };
 
 use axum::{
-    error_handling::HandleErrorLayer,
     extract::{Extension, Path, Query},
     handler::Handler,
     http::StatusCode,
@@ -14,14 +12,11 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use ethers_core::types::H256;
-use log::{error, info};
 use serde::{Deserialize, Serialize};
-use tower::{BoxError, ServiceBuilder};
 
-use crate::database::SignedTx;
+use crate::{database::SignedTx, error::ChainError, types::Hash};
 
-use super::{database, Node};
+use super::Node;
 
 type ArcNode = Arc<RwLock<Node>>;
 
@@ -34,58 +29,52 @@ pub fn new_router(node: ArcNode) -> Router {
         .route("/peers", post(add_peer))
         .route("/peer/status", get(get_peer_status))
         .fallback(not_found.into_service())
-        .layer(
-            ServiceBuilder::new()
-                .layer(HandleErrorLayer::new(handle_timeout_error))
-                .timeout(Duration::from_secs(10))
-                .layer(Extension(node))
-                .into_inner(),
-        )
+        .layer(Extension(node))
 }
 
-async fn handle_timeout_error(err: BoxError) -> (StatusCode, String) {
-    if err.is::<tower::timeout::error::Elapsed>() {
-        (StatusCode::REQUEST_TIMEOUT, "Timeout".to_string())
-    } else {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Unknown error: {}", err),
-        )
+#[derive(Debug, Serialize)]
+struct OkResp {
+    success: bool,
+}
+
+impl OkResp {
+    pub fn new() -> Self {
+        Self { success: true }
     }
 }
 
 #[derive(Debug, Deserialize)]
 struct GetBlocksReq {
-    offset: usize,
+    from_height: usize,
 }
 
-async fn get_blocks(Query(params): Query<GetBlocksReq>) -> impl IntoResponse {
-    match database::get_blocks(params.offset) {
-        Ok(blocks) => Json(blocks),
-        Err(err) => {
-            error!("Read db error: {}", err);
-            Json(vec![])
-        }
-    }
+async fn get_blocks(
+    Query(params): Query<GetBlocksReq>,
+    Extension(node): Extension<ArcNode>,
+) -> impl IntoResponse {
+    Json(node.read().unwrap().get_blocks(params.from_height))
 }
 
-async fn get_block(Path(number): Path<u64>) -> Result<impl IntoResponse, StatusCode> {
-    let block = database::get_block(number).ok_or(StatusCode::NOT_FOUND)?;
+async fn get_block(
+    Path(number): Path<u64>,
+    Extension(node): Extension<ArcNode>,
+) -> Result<impl IntoResponse, ChainError> {
+    let block = node.read().unwrap().get_block(number)?;
     Ok(Json(block))
 }
 
 #[derive(Debug, Serialize)]
 struct BalancesResp {
-    hash: H256,
+    hash: Hash,
     balances: HashMap<String, u64>,
 }
 
 async fn get_balances(Extension(node): Extension<ArcNode>) -> impl IntoResponse {
-    let state = &node.read().unwrap().state;
+    let node = node.read().unwrap();
 
     Json(BalancesResp {
-        hash: state.latest_block_hash(),
-        balances: state.get_balances(),
+        hash: node.latest_block_hash(),
+        balances: node.get_balances(),
     })
 }
 
@@ -99,10 +88,10 @@ struct AddTxReq {
 async fn add_tx(
     Json(tx): Json<AddTxReq>,
     Extension(node): Extension<ArcNode>,
-) -> impl IntoResponse {
-    node.write().unwrap().add_tx(&tx.from, &tx.to, tx.value);
+) -> Result<impl IntoResponse, ChainError> {
+    node.write().unwrap().add_tx(&tx.from, &tx.to, tx.value)?;
 
-    (StatusCode::OK, "OK")
+    Ok(Json(OkResp::new()))
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,15 +102,15 @@ struct AddPeerReq {
 async fn add_peer(
     Json(peer): Json<AddPeerReq>,
     Extension(node): Extension<ArcNode>,
-) -> impl IntoResponse {
-    node.write().unwrap().add_peer(&peer.addr);
+) -> Result<impl IntoResponse, ChainError> {
+    node.write().unwrap().add_peer(&peer.addr)?;
 
-    (StatusCode::OK, "OK")
+    Ok(Json(OkResp::new()))
 }
 
 #[derive(Debug, Serialize)]
 struct PeerStatusResp {
-    hash: H256,
+    hash: Hash,
     number: u64,
     peers: HashSet<SocketAddr>,
     pending_txs: Vec<SignedTx>,
@@ -129,9 +118,10 @@ struct PeerStatusResp {
 
 async fn get_peer_status(Extension(node): Extension<ArcNode>) -> impl IntoResponse {
     let node = node.read().unwrap();
+
     Json(PeerStatusResp {
-        hash: node.state.latest_block_hash(),
-        number: node.state.latest_block_number(),
+        hash: node.latest_block_hash(),
+        number: node.latest_block_number(),
         peers: node.peers.clone(),
         pending_txs: node.get_pending_txs(),
     })
