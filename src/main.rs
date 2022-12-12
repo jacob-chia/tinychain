@@ -37,8 +37,8 @@ enum SubCommand {
         #[arg(short, long)]
         miner: String,
         /// the bootstraping node that provides initial information to newly joining nodes
-        #[arg(short, long, default_value_t = String::from("127.0.0.1:8000"))]
-        bootstrap_addr: String,
+        #[arg(short, long)]
+        bootstrap_addr: Option<String>,
     },
 }
 
@@ -65,10 +65,7 @@ async fn main() {
             wallet::init_keystore_dir(&datadir);
             database::init_database_dir(&datadir);
 
-            Node::new(&addr, &miner, &bootstrap_addr)
-                .unwrap()
-                .run()
-                .await;
+            Node::new(addr, miner, bootstrap_addr).unwrap().run().await;
         }
     }
 }

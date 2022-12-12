@@ -24,16 +24,22 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(addr: &str, miner: &str, bootstrap_addr: &str) -> Result<Self, ChainError> {
+    pub fn new(
+        addr: String,
+        miner: String,
+        bootstrap_addr: Option<String>,
+    ) -> Result<Self, ChainError> {
         let mut node = Self {
             addr: addr.parse()?,
-            miner: miner.to_string(),
+            miner: miner,
             state: Box::new(State::new(MINING_DIFFICULTY)?),
             pending_txs: HashMap::new(),
             peers: HashSet::new(),
         };
 
-        node.connect_to_peer(bootstrap_addr);
+        if let Some(ref bootstrap_addr) = bootstrap_addr {
+            node.connect_to_peer(bootstrap_addr);
+        }
 
         Ok(node)
     }

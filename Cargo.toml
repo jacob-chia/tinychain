@@ -15,5 +15,6 @@ log = "0.4"        # 日志
 env_logger = "0.9" # 日志
 serde = { version = "1.0", features = ["derive"] } # 序列化/反序列化
 serde_json = "1.0" # 序列化/反序列化
-axum = "0.5" # http server
+axum = "0.5" # HTTP Server
+reqwest = { version = "0.11", features = ["blocking", "json"] } # HTTP Client
 tokio = { version = "1.21", features = ["full"] } # 异步运行时
