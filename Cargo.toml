@@ -11,10 +11,11 @@ once_cell = "1.15" # Lazy static
 clap = { version = "4.0", features = ["derive"] } # 命令行解析
 ethers-core = "0.17"    # 账户管理、签名、验签
 ethers-signers = "0.17" # 账户管理、签名、验签
-log = "0.4"        # 日志
-env_logger = "0.9" # 日志
+log = "0.4"         # 日志
+env_logger = "0.9"  # 日志
 serde = { version = "1.0", features = ["derive"] } # 序列化/反序列化
-serde_json = "1.0" # 序列化/反序列化
-axum = "0.5" # HTTP Server
+serde_json = "1.0"  # 序列化/反序列化
+async-trait = "0.1" # 允许 trait 里有 async fn
+axum = "0.5"        # HTTP Server
 reqwest = { version = "0.11", features = ["blocking", "json"] } # HTTP Client
 tokio = { version = "1.21", features = ["full"] } # 异步运行时

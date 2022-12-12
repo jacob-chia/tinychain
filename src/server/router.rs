@@ -1,9 +1,3 @@
-use std::{
-    collections::{HashMap, HashSet},
-    net::SocketAddr,
-    sync::{Arc, RwLock},
-};
-
 use axum::{
     extract::{Extension, Path, Query},
     handler::Handler,
@@ -13,21 +7,32 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use std::{
+    collections::{HashMap, HashSet},
+    net::SocketAddr,
+    sync::{Arc, RwLock},
+};
 
-use crate::{database::SignedTx, error::ChainError, types::Hash};
+use crate::{
+    database::SignedTx,
+    error::ChainError,
+    node::{Node, Peer},
+    types::Hash,
+};
 
-use super::Node;
+type ArcNode<P> = Arc<RwLock<Node<P>>>;
 
-type ArcNode = Arc<RwLock<Node>>;
-
-pub fn new_router(node: ArcNode) -> Router {
+pub fn new_router<P>(node: ArcNode<P>) -> Router
+where
+    P: Peer + Send + Sync + 'static,
+{
     Router::new()
-        .route("/blocks", get(get_blocks))
-        .route("/blocks/:number", get(get_block))
-        .route("/balances", get(get_balances))
-        .route("/txs", post(add_tx))
-        .route("/peers", post(add_peer))
-        .route("/peer/status", get(get_peer_status))
+        .route("/blocks", get(get_blocks::<P>))
+        .route("/blocks/:number", get(get_block::<P>))
+        .route("/balances", get(get_balances::<P>))
+        .route("/txs", post(add_tx::<P>))
+        .route("/peer/ping", post(ping_peer::<P>))
+        .route("/peer/status", get(get_peer_status::<P>))
         .fallback(not_found.into_service())
         .layer(Extension(node))
 }
@@ -48,17 +53,17 @@ struct GetBlocksReq {
     offset: usize,
 }
 
-async fn get_blocks(
+async fn get_blocks<P: Peer + Send + Sync + 'static>(
     Query(params): Query<GetBlocksReq>,
-    Extension(node): Extension<ArcNode>,
+    Extension(node): Extension<ArcNode<P>>,
 ) -> Result<impl IntoResponse, ChainError> {
     let blocks = node.read().unwrap().get_blocks(params.offset)?;
     Ok(Json(blocks))
 }
 
-async fn get_block(
+async fn get_block<P: Peer + Send + Sync + 'static>(
     Path(number): Path<u64>,
-    Extension(node): Extension<ArcNode>,
+    Extension(node): Extension<ArcNode<P>>,
 ) -> Result<impl IntoResponse, ChainError> {
     let block = node.read().unwrap().get_block(number)?;
     Ok(Json(block))
@@ -70,7 +75,9 @@ struct BalancesResp {
     balances: HashMap<String, u64>,
 }
 
-async fn get_balances(Extension(node): Extension<ArcNode>) -> impl IntoResponse {
+async fn get_balances<P: Peer + Send + Sync + 'static>(
+    Extension(node): Extension<ArcNode<P>>,
+) -> impl IntoResponse {
     let node = node.read().unwrap();
 
     Json(BalancesResp {
@@ -86,9 +93,9 @@ struct AddTxReq {
     value: u64,
 }
 
-async fn add_tx(
+async fn add_tx<P: Peer + Send + Sync + 'static>(
     Json(tx): Json<AddTxReq>,
-    Extension(node): Extension<ArcNode>,
+    Extension(node): Extension<ArcNode<P>>,
 ) -> Result<impl IntoResponse, ChainError> {
     node.write().unwrap().add_tx(&tx.from, &tx.to, tx.value)?;
 
@@ -96,13 +103,13 @@ async fn add_tx(
 }
 
 #[derive(Debug, Deserialize)]
-struct AddPeerReq {
+struct PingPeerReq {
     addr: String,
 }
 
-async fn add_peer(
-    Json(peer): Json<AddPeerReq>,
-    Extension(node): Extension<ArcNode>,
+async fn ping_peer<P: Peer + Send + Sync + 'static>(
+    Json(peer): Json<PingPeerReq>,
+    Extension(node): Extension<ArcNode<P>>,
 ) -> Result<impl IntoResponse, ChainError> {
     node.write().unwrap().add_peer(&peer.addr)?;
 
@@ -117,7 +124,9 @@ struct PeerStatusResp {
     pending_txs: Vec<SignedTx>,
 }
 
-async fn get_peer_status(Extension(node): Extension<ArcNode>) -> impl IntoResponse {
+async fn get_peer_status<P: Peer + Send + Sync + 'static>(
+    Extension(node): Extension<ArcNode<P>>,
+) -> impl IntoResponse {
     let node = node.read().unwrap();
 
     Json(PeerStatusResp {

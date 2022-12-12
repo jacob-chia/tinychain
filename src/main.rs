@@ -1,9 +1,12 @@
 use clap::{Parser, Subcommand};
+use data::HttpPeer;
 use log::info;
 
+mod data;
 mod database;
 mod error;
 mod node;
+mod server;
 mod types;
 mod utils;
 mod wallet;
@@ -65,7 +68,12 @@ async fn main() {
             wallet::init_keystore_dir(&datadir);
             database::init_database_dir(&datadir);
 
-            Node::new(addr, miner, bootstrap_addr).unwrap().run().await;
+            let http_peer = HttpPeer::new();
+            let node = Node::new(addr, miner, bootstrap_addr, http_peer)
+                .await
+                .unwrap();
+
+            server::run(node).await;
         }
     }
 }
