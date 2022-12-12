@@ -1,64 +1,47 @@
-use axum::Server;
-use ethers_core::types::H256;
 use log::info;
 use std::{
     collections::{HashMap, HashSet},
     net::SocketAddr,
-    sync::{Arc, RwLock},
 };
-use tokio::signal;
-
-mod router;
 
 use crate::{database::*, error::ChainError, types::Hash};
+
+mod peer;
+pub use peer::Peer;
 
 const MINING_DIFFICULTY: usize = 3;
 
 #[derive(Debug)]
-pub struct Node {
-    addr: SocketAddr,
-    miner: String,
-    state: Box<State>,
-    pending_txs: HashMap<H256, SignedTx>,
-    peers: HashSet<SocketAddr>,
+pub struct Node<P> {
+    pub(crate) addr: SocketAddr,
+    pub(crate) miner: String,
+    pub(crate) pending_txs: HashMap<Hash, SignedTx>,
+    pub(crate) peers: HashSet<SocketAddr>,
+    pub(crate) state: Box<State>,
+    pub(crate) peer_proxy: Box<P>,
 }
 
-impl Node {
-    pub fn new(
+impl<P: Peer + Send + Sync + 'static> Node<P> {
+    pub async fn new(
         addr: String,
         miner: String,
         bootstrap_addr: Option<String>,
+        peer_proxy: P,
     ) -> Result<Self, ChainError> {
         let mut node = Self {
             addr: addr.parse()?,
             miner: miner,
-            state: Box::new(State::new(MINING_DIFFICULTY)?),
             pending_txs: HashMap::new(),
             peers: HashSet::new(),
+            state: Box::new(State::new(MINING_DIFFICULTY)?),
+            peer_proxy: Box::new(peer_proxy),
         };
 
         if let Some(ref bootstrap_addr) = bootstrap_addr {
-            node.connect_to_peer(bootstrap_addr);
+            node.connect_to_peer(bootstrap_addr).await?;
         }
 
         Ok(node)
-    }
-
-    pub async fn run(self) {
-        let addr = self.addr;
-        info!("Listening on {addr}");
-        info!("Current state =====================================");
-        info!("balances         : {:?}", self.get_balances());
-        info!("latest_block     : {:?}", self.state.latest_block());
-        info!("latest_block_hash: {:?}", self.latest_block_hash());
-
-        let app = router::new_router(Arc::new(RwLock::new(self)));
-
-        Server::bind(&addr)
-            .serve(app.into_make_service())
-            .with_graceful_shutdown(shutdown_signal())
-            .await
-            .unwrap();
     }
 
     pub fn add_tx(&mut self, from: &str, to: &str, value: u64) -> Result<(), ChainError> {
@@ -115,36 +98,14 @@ impl Node {
         Ok(())
     }
 
-    fn connect_to_peer(&mut self, peer: &str) {
+    async fn connect_to_peer(&mut self, peer: &str) -> Result<(), ChainError> {
         if peer == self.addr.to_string() {
-            return;
+            return Ok(());
         }
 
-        // if add peer ok
-        self.add_peer(peer);
-    }
-}
+        self.peer_proxy.ping(&self.addr.to_string(), peer).await?;
+        self.peers.insert(peer.parse()?);
 
-async fn shutdown_signal() {
-    let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        Ok(())
     }
 }
