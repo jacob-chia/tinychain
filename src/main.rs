@@ -49,8 +49,6 @@ enum SubCommand {
 #[tokio::main]
 async fn main() {
     env_logger::init();
-
-    // 解析命令行参数
     let opts = Opts::parse();
 
     match opts.subcmd {
@@ -71,6 +69,7 @@ async fn main() {
 
             let file_state = FileState::new(MINING_DIFFICULTY).unwrap();
             let http_peer = HttpPeer::new();
+
             let node = Node::new(addr, miner, bootstrap_addr, file_state, http_peer)
                 .await
                 .unwrap();
