@@ -1,9 +1,7 @@
 use clap::{Parser, Subcommand};
-use data::HttpPeer;
 use log::info;
 
 mod data;
-mod database;
 mod error;
 mod node;
 mod server;
@@ -11,7 +9,10 @@ mod types;
 mod utils;
 mod wallet;
 
+use data::{FileState, HttpPeer};
 use node::Node;
+
+const MINING_DIFFICULTY: usize = 3;
 
 /// The command of tiny-chain
 #[derive(Debug, Parser)]
@@ -66,10 +67,11 @@ async fn main() {
             bootstrap_addr,
         } => {
             wallet::init_keystore_dir(&datadir);
-            database::init_database_dir(&datadir);
+            data::init_database_dir(&datadir);
 
+            let file_state = FileState::new(MINING_DIFFICULTY).unwrap();
             let http_peer = HttpPeer::new();
-            let node = Node::new(addr, miner, bootstrap_addr, http_peer)
+            let node = Node::new(addr, miner, bootstrap_addr, file_state, http_peer)
                 .await
                 .unwrap();
 

@@ -35,7 +35,7 @@ impl DerefMut for HttpPeer {
 #[async_trait]
 impl Peer for HttpPeer {
     async fn ping(&self, my_addr: &str, peer_addr: &str) -> Result<(), ChainError> {
-        let url = format!("http://{}/peers", peer_addr);
+        let url = format!("http://{}/peer/ping", peer_addr);
 
         let mut body = HashMap::new();
         body.insert("addr", my_addr);

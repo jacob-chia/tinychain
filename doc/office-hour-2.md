@@ -33,6 +33,8 @@
 1. 获取指定number之后的区块列表
 
 ```sh
+RUST_LOG=info ./target/debug/tinychain run -a "127.0.0.1:8001" -m "16d5e01e-709a-4536-a4f2-9f069070c51a" -b "127.0.0.1:8000"
+
 curl http://localhost:8000/blocks?offset=2 | jq
 
 curl http://localhost:8000/blocks/2 | jq

@@ -1,15 +1,41 @@
 use log::info;
+use once_cell::sync::OnceCell;
 use std::{
     collections::HashMap,
     fs::OpenOptions,
     io::{BufRead, BufReader, Write},
 };
 
-use super::*;
-use crate::{error::ChainError, types::Hash};
+use crate::{
+    error::ChainError,
+    node::{Block, BlockKV, SignedTx, State},
+    types::Hash,
+};
+
+mod genesis;
+
+pub use genesis::*;
+
+static DATABASE_DIR: OnceCell<String> = OnceCell::new();
+static GENESIS_PATH: OnceCell<String> = OnceCell::new();
+static BLOCKDB_PATH: OnceCell<String> = OnceCell::new();
+
+pub fn init_database_dir(datadir: &str) {
+    let mut dir = datadir.to_owned();
+    dir.push_str("database/");
+
+    let mut genesis_path = dir.clone();
+    let mut blockdb_path = genesis_path.clone();
+    genesis_path.push_str("genesis.json");
+    blockdb_path.push_str("block.db");
+
+    DATABASE_DIR.get_or_init(|| dir);
+    GENESIS_PATH.get_or_init(|| genesis_path);
+    BLOCKDB_PATH.get_or_init(|| blockdb_path);
+}
 
 #[derive(Debug, Clone, Default)]
-pub struct State {
+pub struct FileState {
     balances: HashMap<String, u64>,
     account2nonce: HashMap<String, u64>,
     latest_block: Block,
@@ -18,10 +44,9 @@ pub struct State {
     has_blocks: bool,
 }
 
-impl State {
+impl FileState {
     pub fn new(mining_difficulty: usize) -> Result<Self, ChainError> {
         let genesis = Genesis::load()?;
-        info!("Genesis loaded, token symbol: {}", genesis.symbol);
 
         let mut state = Self {
             balances: genesis.clone_balances(),
@@ -31,79 +56,6 @@ impl State {
 
         state.load_db()?;
         Ok(state)
-    }
-
-    pub fn get_balances(&self) -> HashMap<String, u64> {
-        self.balances.clone()
-    }
-
-    pub fn next_block_number(&self) -> u64 {
-        if self.has_blocks {
-            return self.latest_block.header.number + 1;
-        }
-
-        0
-    }
-
-    pub fn next_account_nonce(&self, account: &str) -> u64 {
-        *self.account2nonce.get(account).unwrap_or(&0) + 1
-    }
-
-    pub fn latest_block(&self) -> Block {
-        self.latest_block.clone()
-    }
-
-    pub fn latest_block_hash(&self) -> Hash {
-        self.latest_block_hash
-    }
-
-    pub fn latest_block_number(&self) -> u64 {
-        if self.has_blocks {
-            return self.latest_block.header.number;
-        }
-
-        0
-    }
-
-    pub fn add_block(&mut self, block: Block) -> Result<Hash, ChainError> {
-        // Why clone?
-        // To prevent the state from being corrupted by invalid blocks.
-        let mut state = self.clone();
-        state.apply_block(block)?;
-        state.persist()?;
-        *self = state;
-
-        Ok(self.latest_block_hash)
-    }
-
-    pub fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError> {
-        let db_path = BLOCKDB_PATH.get().unwrap();
-        let db = OpenOptions::new().read(true).open(db_path)?;
-
-        Ok(BufReader::new(db)
-            .lines()
-            .skip(offset)
-            .map(|line| {
-                serde_json::from_str::<BlockKV>(&line.unwrap())
-                    .unwrap()
-                    .take_block()
-            })
-            .collect::<Vec<_>>())
-    }
-
-    pub fn get_block(&self, number: u64) -> Result<Block, ChainError> {
-        let db_path = BLOCKDB_PATH.get().unwrap();
-        let db = OpenOptions::new().read(true).open(db_path)?;
-
-        BufReader::new(db)
-            .lines()
-            .nth(number as usize)
-            .map(|line| {
-                serde_json::from_str::<BlockKV>(&line.unwrap())
-                    .unwrap()
-                    .take_block()
-            })
-            .ok_or(ChainError::BlockNotFound(number))
     }
 
     fn load_db(&mut self) -> Result<(), ChainError> {
@@ -222,5 +174,98 @@ impl State {
         }
 
         Ok(())
+    }
+}
+
+impl State for FileState {
+    fn get_balances(&self) -> HashMap<String, u64> {
+        self.balances.clone()
+    }
+
+    fn next_block_number(&self) -> u64 {
+        if self.has_blocks {
+            return self.latest_block.header.number + 1;
+        }
+
+        0
+    }
+
+    fn next_account_nonce(&self, account: &str) -> u64 {
+        *self.account2nonce.get(account).unwrap_or(&0) + 1
+    }
+
+    fn latest_block(&self) -> Block {
+        self.latest_block.clone()
+    }
+
+    fn latest_block_hash(&self) -> Hash {
+        self.latest_block_hash
+    }
+
+    fn latest_block_number(&self) -> u64 {
+        if self.has_blocks {
+            return self.latest_block.header.number;
+        }
+
+        0
+    }
+
+    fn add_block(&mut self, block: Block) -> Result<Hash, ChainError> {
+        // Why clone?
+        // To prevent the state from being corrupted by invalid blocks.
+        let mut state = self.clone();
+        state.apply_block(block)?;
+        state.persist()?;
+        *self = state;
+
+        Ok(self.latest_block_hash)
+    }
+
+    fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError> {
+        let db_path = BLOCKDB_PATH.get().unwrap();
+        let db = OpenOptions::new().read(true).open(db_path)?;
+
+        Ok(BufReader::new(db)
+            .lines()
+            .skip(offset)
+            .map(|line| {
+                serde_json::from_str::<BlockKV>(&line.unwrap())
+                    .unwrap()
+                    .take_block()
+            })
+            .collect::<Vec<_>>())
+    }
+
+    fn get_block(&self, number: u64) -> Result<Block, ChainError> {
+        let db_path = BLOCKDB_PATH.get().unwrap();
+        let db = OpenOptions::new().read(true).open(db_path)?;
+
+        BufReader::new(db)
+            .lines()
+            .nth(number as usize)
+            .map(|line| {
+                serde_json::from_str::<BlockKV>(&line.unwrap())
+                    .unwrap()
+                    .take_block()
+            })
+            .ok_or(ChainError::BlockNotFound(number))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_database_dir_can_only_be_initialized_once() {
+        init_database_dir("/tmp/");
+        assert_eq!("/tmp/database/", DATABASE_DIR.get().unwrap());
+        assert_eq!("/tmp/database/genesis.json", GENESIS_PATH.get().unwrap());
+        assert_eq!("/tmp/database/block.db", BLOCKDB_PATH.get().unwrap());
+
+        init_database_dir("/another/dir/");
+        assert_eq!("/tmp/database/", DATABASE_DIR.get().unwrap());
+        assert_eq!("/tmp/database/genesis.json", GENESIS_PATH.get().unwrap());
+        assert_eq!("/tmp/database/block.db", BLOCKDB_PATH.get().unwrap());
     }
 }

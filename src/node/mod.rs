@@ -4,28 +4,38 @@ use std::{
     net::SocketAddr,
 };
 
-use crate::{database::*, error::ChainError, types::Hash};
+use crate::{error::ChainError, types::Hash};
 
+mod block;
 mod peer;
-pub use peer::Peer;
+mod state;
+mod tx;
 
-const MINING_DIFFICULTY: usize = 3;
+pub use block::*;
+pub use peer::*;
+pub use state::*;
+pub use tx::*;
 
 #[derive(Debug)]
-pub struct Node<P> {
+pub struct Node<S, P> {
     pub(crate) addr: SocketAddr,
     pub(crate) miner: String,
     pub(crate) pending_txs: HashMap<Hash, SignedTx>,
     pub(crate) peers: HashSet<SocketAddr>,
-    pub(crate) state: Box<State>,
+    pub(crate) state: Box<S>,
     pub(crate) peer_proxy: Box<P>,
 }
 
-impl<P: Peer + Send + Sync + 'static> Node<P> {
+impl<S, P> Node<S, P>
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
     pub async fn new(
         addr: String,
         miner: String,
         bootstrap_addr: Option<String>,
+        state: S,
         peer_proxy: P,
     ) -> Result<Self, ChainError> {
         let mut node = Self {
@@ -33,7 +43,7 @@ impl<P: Peer + Send + Sync + 'static> Node<P> {
             miner: miner,
             pending_txs: HashMap::new(),
             peers: HashSet::new(),
-            state: Box::new(State::new(MINING_DIFFICULTY)?),
+            state: Box::new(state),
             peer_proxy: Box::new(peer_proxy),
         };
 

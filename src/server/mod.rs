@@ -3,12 +3,13 @@ use log::info;
 use std::sync::{Arc, RwLock};
 use tokio::signal;
 
-use crate::node::{Node, Peer};
+use crate::node::{Node, Peer, State};
 
 mod router;
 
-pub async fn run<P>(node: Node<P>)
+pub async fn run<S, P>(node: Node<S, P>)
 where
+    S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
     let addr = node.addr;
