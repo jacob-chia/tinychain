@@ -47,6 +47,7 @@ pub struct FileState {
 impl FileState {
     pub fn new(mining_difficulty: usize) -> Result<Self, ChainError> {
         let genesis = Genesis::load()?;
+        info!("Genesis loaded, token symbol: {}", genesis.symbol);
 
         let mut state = Self {
             balances: genesis.clone_balances(),
