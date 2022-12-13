@@ -14,25 +14,25 @@ use std::{
 };
 
 use crate::{
-    database::SignedTx,
     error::ChainError,
-    node::{Node, Peer},
+    node::{Node, Peer, SignedTx, State},
     types::Hash,
 };
 
-type ArcNode<P> = Arc<RwLock<Node<P>>>;
+type ArcNode<S, P> = Arc<RwLock<Node<S, P>>>;
 
-pub fn new_router<P>(node: ArcNode<P>) -> Router
+pub fn new_router<S, P>(node: ArcNode<S, P>) -> Router
 where
+    S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
     Router::new()
-        .route("/blocks", get(get_blocks::<P>))
-        .route("/blocks/:number", get(get_block::<P>))
-        .route("/balances", get(get_balances::<P>))
-        .route("/txs", post(add_tx::<P>))
-        .route("/peer/ping", post(ping_peer::<P>))
-        .route("/peer/status", get(get_peer_status::<P>))
+        .route("/blocks", get(get_blocks::<S, P>))
+        .route("/blocks/:number", get(get_block::<S, P>))
+        .route("/balances", get(get_balances::<S, P>))
+        .route("/txs", post(add_tx::<S, P>))
+        .route("/peer/ping", post(ping_peer::<S, P>))
+        .route("/peer/status", get(get_peer_status::<S, P>))
         .fallback(not_found.into_service())
         .layer(Extension(node))
 }
@@ -53,18 +53,26 @@ struct GetBlocksReq {
     offset: usize,
 }
 
-async fn get_blocks<P: Peer + Send + Sync + 'static>(
+async fn get_blocks<S, P>(
     Query(params): Query<GetBlocksReq>,
-    Extension(node): Extension<ArcNode<P>>,
-) -> Result<impl IntoResponse, ChainError> {
+    Extension(node): Extension<ArcNode<S, P>>,
+) -> Result<impl IntoResponse, ChainError>
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
     let blocks = node.read().unwrap().get_blocks(params.offset)?;
     Ok(Json(blocks))
 }
 
-async fn get_block<P: Peer + Send + Sync + 'static>(
+async fn get_block<S, P>(
     Path(number): Path<u64>,
-    Extension(node): Extension<ArcNode<P>>,
-) -> Result<impl IntoResponse, ChainError> {
+    Extension(node): Extension<ArcNode<S, P>>,
+) -> Result<impl IntoResponse, ChainError>
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
     let block = node.read().unwrap().get_block(number)?;
     Ok(Json(block))
 }
@@ -75,9 +83,11 @@ struct BalancesResp {
     balances: HashMap<String, u64>,
 }
 
-async fn get_balances<P: Peer + Send + Sync + 'static>(
-    Extension(node): Extension<ArcNode<P>>,
-) -> impl IntoResponse {
+async fn get_balances<S, P>(Extension(node): Extension<ArcNode<S, P>>) -> impl IntoResponse
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
     let node = node.read().unwrap();
 
     Json(BalancesResp {
@@ -93,10 +103,14 @@ struct AddTxReq {
     value: u64,
 }
 
-async fn add_tx<P: Peer + Send + Sync + 'static>(
+async fn add_tx<S, P>(
     Json(tx): Json<AddTxReq>,
-    Extension(node): Extension<ArcNode<P>>,
-) -> Result<impl IntoResponse, ChainError> {
+    Extension(node): Extension<ArcNode<S, P>>,
+) -> Result<impl IntoResponse, ChainError>
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
     node.write().unwrap().add_tx(&tx.from, &tx.to, tx.value)?;
 
     Ok(Json(OkResp::new()))
@@ -107,10 +121,14 @@ struct PingPeerReq {
     addr: String,
 }
 
-async fn ping_peer<P: Peer + Send + Sync + 'static>(
+async fn ping_peer<S, P>(
     Json(peer): Json<PingPeerReq>,
-    Extension(node): Extension<ArcNode<P>>,
-) -> Result<impl IntoResponse, ChainError> {
+    Extension(node): Extension<ArcNode<S, P>>,
+) -> Result<impl IntoResponse, ChainError>
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
     node.write().unwrap().add_peer(&peer.addr)?;
 
     Ok(Json(OkResp::new()))
@@ -124,9 +142,11 @@ struct PeerStatusResp {
     pending_txs: Vec<SignedTx>,
 }
 
-async fn get_peer_status<P: Peer + Send + Sync + 'static>(
-    Extension(node): Extension<ArcNode<P>>,
-) -> impl IntoResponse {
+async fn get_peer_status<S, P>(Extension(node): Extension<ArcNode<S, P>>) -> impl IntoResponse
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
     let node = node.read().unwrap();
 
     Json(PeerStatusResp {

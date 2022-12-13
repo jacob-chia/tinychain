@@ -9,17 +9,17 @@ const BLOCK_REWORD: u64 = 100;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct BlockHeader {
-    pub(super) parent: Hash,
-    pub(super) number: u64,
-    pub(super) nonce: u64,
-    pub(super) time: u64,
-    pub(super) miner: String,
+    pub(crate) parent: Hash,
+    pub(crate) number: u64,
+    pub(crate) nonce: u64,
+    pub(crate) time: u64,
+    pub(crate) miner: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Block {
-    pub(super) header: BlockHeader,
-    pub(super) txs: Vec<SignedTx>,
+    pub(crate) header: BlockHeader,
+    pub(crate) txs: Vec<SignedTx>,
 }
 
 impl<'a> Block {
@@ -99,8 +99,8 @@ impl<'a> BlockBuilder<'a> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockKV {
-    pub(super) key: Hash,
-    pub(super) value: Block,
+    pub(crate) key: Hash,
+    pub(crate) value: Block,
 }
 
 impl BlockKV {
