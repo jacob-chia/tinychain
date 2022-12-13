@@ -8,13 +8,13 @@ const GAS_PRICE: u64 = 1;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tx {
-    pub(crate) from: String,
-    pub(crate) to: String,
-    pub(crate) value: u64,
-    pub(crate) nonce: u64,
-    pub(crate) gas: u64,
-    pub(crate) gas_price: u64,
-    pub(crate) time: u64,
+    pub from: String,
+    pub to: String,
+    pub value: u64,
+    pub nonce: u64,
+    pub gas: u64,
+    pub gas_price: u64,
+    pub time: u64,
 }
 
 impl Tx {
@@ -46,10 +46,10 @@ impl Tx {
 
 #[derive(Debug, Default)]
 pub struct TxBuilder {
-    pub(crate) from: String,
-    pub(crate) to: String,
-    pub(crate) value: u64,
-    pub(crate) nonce: u64,
+    pub from: String,
+    pub to: String,
+    pub value: u64,
+    pub nonce: u64,
 }
 
 impl TxBuilder {
@@ -88,8 +88,8 @@ impl TxBuilder {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SignedTx {
-    pub(crate) tx: Tx,
-    pub(crate) sig: String,
+    pub tx: Tx,
+    pub sig: String,
 }
 
 impl SignedTx {

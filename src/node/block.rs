@@ -1,6 +1,7 @@
+use std::mem;
+
 use ethers_core::utils::hash_message;
 use serde::{Deserialize, Serialize};
-use std::mem;
 
 use super::SignedTx;
 use crate::types::Hash;
@@ -9,17 +10,17 @@ const BLOCK_REWORD: u64 = 100;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct BlockHeader {
-    pub(crate) parent: Hash,
-    pub(crate) number: u64,
-    pub(crate) nonce: u64,
-    pub(crate) time: u64,
-    pub(crate) miner: String,
+    pub parent: Hash,
+    pub number: u64,
+    pub nonce: u64,
+    pub time: u64,
+    pub miner: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Block {
-    pub(crate) header: BlockHeader,
-    pub(crate) txs: Vec<SignedTx>,
+    pub header: BlockHeader,
+    pub txs: Vec<SignedTx>,
 }
 
 impl<'a> Block {
@@ -99,8 +100,8 @@ impl<'a> BlockBuilder<'a> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockKV {
-    pub(crate) key: Hash,
-    pub(crate) value: Block,
+    pub key: Hash,
+    pub value: Block,
 }
 
 impl BlockKV {

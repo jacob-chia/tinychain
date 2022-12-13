@@ -1,6 +1,7 @@
+use std::sync::Arc;
+
 use axum::Server;
 use log::info;
-use std::sync::{Arc, RwLock};
 use tokio::signal;
 
 use crate::node::{Node, Peer, State};
@@ -12,10 +13,10 @@ where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
-    let addr = node.addr;
-    info!("Listening on {addr}");
+    let addr = node.addr.parse().unwrap();
+    info!("Listening on {addr} ====================");
 
-    let app = router::new_router(Arc::new(RwLock::new(node)));
+    let app = router::new_router(Arc::new(node));
 
     Server::bind(&addr)
         .serve(app.into_make_service())
