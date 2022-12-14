@@ -48,8 +48,7 @@ enum SubCommand {
     },
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     env_logger::init();
     let opts = Opts::parse();
 
@@ -71,7 +70,6 @@ async fn main() {
 
             let file_state = FileState::new(MINING_DIFFICULTY).unwrap();
             let http_peer = HttpPeer::new();
-
             let node =
                 Arc::new(Node::new(addr, miner, bootstrap_addr, file_state, http_peer).unwrap());
             let miner = node.clone();
@@ -79,7 +77,12 @@ async fn main() {
 
             thread::spawn(move || miner.mine());
             thread::spawn(move || syncer.sync());
-            server::run(node).await;
+
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(server::run(node))
         }
     }
 }

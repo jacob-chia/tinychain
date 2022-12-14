@@ -1,6 +1,5 @@
-use async_trait::async_trait;
 use log::info;
-use reqwest::Client;
+use reqwest::blocking::Client;
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
@@ -32,15 +31,14 @@ impl DerefMut for HttpPeer {
     }
 }
 
-#[async_trait]
 impl Peer for HttpPeer {
-    async fn ping(&self, my_addr: &str, peer_addr: &str) -> Result<(), ChainError> {
+    fn ping(&self, my_addr: &str, peer_addr: &str) -> Result<(), ChainError> {
         let url = format!("http://{}/peer/ping", peer_addr);
 
         let mut body = HashMap::new();
         body.insert("addr", my_addr);
 
-        let res = self.post(url).json(&body).send().await?;
+        let res = self.post(url).json(&body).send()?;
         info!("<<< response: {:?}", res);
 
         Ok(())
