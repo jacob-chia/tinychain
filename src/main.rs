@@ -74,10 +74,11 @@ async fn main() {
 
             let node =
                 Arc::new(Node::new(addr, miner, bootstrap_addr, file_state, http_peer).unwrap());
-
             let miner = node.clone();
-            thread::spawn(move || miner.mine());
+            let syncer = node.clone();
 
+            thread::spawn(move || miner.mine());
+            thread::spawn(move || syncer.sync());
             server::run(node).await;
         }
     }

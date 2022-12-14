@@ -1,6 +1,5 @@
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
-use crossbeam_channel::{select, tick};
 use dashmap::DashMap;
 use log::info;
 
@@ -10,6 +9,7 @@ mod block;
 mod miner;
 mod peer;
 mod state;
+mod syncer;
 mod tx;
 
 pub use block::*;
@@ -114,17 +114,6 @@ where
 
     pub fn latest_block_number(&self) -> u64 {
         self.state.latest_block_number()
-    }
-
-    pub fn mine(&self) {
-        let ticker = tick(Duration::from_secs(5));
-
-        loop {
-            select! {
-                recv(ticker) -> _ => {
-                }
-            }
-        }
     }
 
     fn add_pending_tx(&self, tx: SignedTx, from_peer: &str) -> Result<(), ChainError> {
