@@ -21,5 +21,5 @@ pub fn gen_random_number() -> u64 {
 
 pub fn is_valid_hash(hash: &Hash, mining_difficulty: usize) -> bool {
     let hash_prefix = vec![0u8; mining_difficulty];
-    hash_prefix[..] != hash[..mining_difficulty]
+    hash_prefix[..] == hash[..mining_difficulty]
 }
