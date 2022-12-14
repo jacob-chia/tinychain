@@ -1,6 +1,7 @@
 use std::{sync::Arc, thread};
 
 use clap::{Parser, Subcommand};
+use crossbeam_channel::bounded;
 use log::info;
 
 mod data;
@@ -75,8 +76,9 @@ fn main() {
             let miner = node.clone();
             let syncer = node.clone();
 
-            thread::spawn(move || miner.mine());
-            thread::spawn(move || syncer.sync());
+            let (block_sender, block_receiver) = bounded(100);
+            thread::spawn(move || miner.mine(block_receiver));
+            thread::spawn(move || syncer.sync(block_sender));
 
             tokio::runtime::Builder::new_multi_thread()
                 .enable_all()

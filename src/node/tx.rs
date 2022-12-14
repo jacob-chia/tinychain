@@ -1,4 +1,3 @@
-use ethers_core::utils::hash_message;
 use serde::{Deserialize, Serialize};
 
 use crate::{error::ChainError, types::Hash, utils, wallet};
@@ -35,7 +34,7 @@ impl Tx {
     }
 
     pub fn hash(&self) -> Hash {
-        hash_message(self.encode())
+        utils::hash_message(&self.encode())
     }
 
     pub fn sign(self) -> Result<SignedTx, ChainError> {
@@ -103,6 +102,10 @@ impl SignedTx {
 
     pub fn hash(&self) -> Hash {
         self.tx.hash()
+    }
+
+    pub fn time(&self) -> u64 {
+        self.tx.time
     }
 }
 

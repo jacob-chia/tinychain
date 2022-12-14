@@ -10,6 +10,7 @@ use crate::{
     error::ChainError,
     node::{Block, BlockKV, SignedTx, State},
     types::Hash,
+    utils,
 };
 
 mod genesis;
@@ -139,9 +140,7 @@ impl FileState {
     }
 
     fn is_valid_hash(&self, hash: &Hash) -> bool {
-        let hash_prefix = vec![0u8; self.mining_difficulty];
-        // TODO
-        hash_prefix[..] != hash[..self.mining_difficulty]
+        utils::is_valid_hash(hash, self.mining_difficulty)
     }
 
     fn apply_txs(&mut self, signed_txs: &[SignedTx]) -> Result<(), ChainError> {
@@ -250,6 +249,10 @@ impl State for FileState {
                     .take_block()
             })
             .ok_or(ChainError::BlockNotFound(number))
+    }
+
+    fn get_mining_difficulty(&self) -> usize {
+        self.mining_difficulty
     }
 }
 

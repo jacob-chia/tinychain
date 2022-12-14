@@ -1,4 +1,6 @@
-use crossbeam_channel::tick;
+use std::time::Duration;
+
+use crossbeam_channel::{tick, Sender};
 
 use super::*;
 
@@ -7,7 +9,7 @@ where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
-    pub fn sync(&self) {
+    pub fn sync(&self, block_sender: Sender<Block>) {
         let ticker = tick(Duration::from_secs(10));
 
         loop {
