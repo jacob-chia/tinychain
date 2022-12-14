@@ -70,7 +70,7 @@ where
         Ok(node)
     }
 
-    pub fn add_tx(&self, from: &str, to: &str, value: u64) -> Result<(), ChainError> {
+    pub fn transfer(&self, from: &str, to: &str, value: u64) -> Result<(), ChainError> {
         let next_nonce = self.state.read().unwrap().next_account_nonce(from);
         let tx = Tx::builder()
             .from(from)
@@ -110,7 +110,7 @@ where
             .collect::<Vec<String>>()
     }
 
-    pub fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError> {
+    pub fn get_blocks(&self, offset: u64) -> Result<Vec<Block>, ChainError> {
         self.state.read().unwrap().get_blocks(offset)
     }
 

@@ -1,6 +1,6 @@
 use std::time::{self, Duration};
 
-use crossbeam_channel::{bounded, select, tick, Receiver};
+use crossbeam_channel::{select, tick, Receiver};
 use log::error;
 
 use super::*;

@@ -25,7 +25,7 @@ where
         .route("/blocks", get(get_blocks::<S, P>))
         .route("/blocks/:number", get(get_block::<S, P>))
         .route("/balances", get(get_balances::<S, P>))
-        .route("/txs", post(add_tx::<S, P>))
+        .route("/transfer", post(transfer::<S, P>))
         .route("/peer/ping", post(ping_peer::<S, P>))
         .route("/peer/status", get(get_peer_status::<S, P>))
         .fallback(not_found.into_service())
@@ -34,7 +34,7 @@ where
 
 #[derive(Debug, Deserialize)]
 struct GetBlocksReq {
-    offset: usize,
+    offset: u64,
 }
 
 async fn get_blocks<S, P>(
@@ -73,21 +73,21 @@ where
 }
 
 #[derive(Debug, Deserialize)]
-struct AddTxReq {
+struct TxReq {
     from: String,
     to: String,
     value: u64,
 }
 
-async fn add_tx<S, P>(
-    Json(tx): Json<AddTxReq>,
+async fn transfer<S, P>(
+    Json(tx): Json<TxReq>,
     Extension(node): Extension<Arc<Node<S, P>>>,
 ) -> Result<impl IntoResponse, ChainError>
 where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
-    node.add_tx(&tx.from, &tx.to, tx.value)?;
+    node.transfer(&tx.from, &tx.to, tx.value)?;
 
     Ok(Json(json!({"success": true})))
 }
