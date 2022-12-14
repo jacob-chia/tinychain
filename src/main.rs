@@ -1,3 +1,5 @@
+use std::{sync::Arc, thread};
+
 use clap::{Parser, Subcommand};
 use log::info;
 
@@ -70,9 +72,11 @@ async fn main() {
             let file_state = FileState::new(MINING_DIFFICULTY).unwrap();
             let http_peer = HttpPeer::new();
 
-            let node = Node::new(addr, miner, bootstrap_addr, file_state, http_peer)
-                .await
-                .unwrap();
+            let node =
+                Arc::new(Node::new(addr, miner, bootstrap_addr, file_state, http_peer).unwrap());
+
+            let miner = node.clone();
+            thread::spawn(move || miner.mine());
 
             server::run(node).await;
         }

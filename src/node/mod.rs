@@ -1,6 +1,7 @@
-use std::{collections::HashMap, net::SocketAddr};
+use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
-use dashmap::{DashMap, DashSet};
+use crossbeam_channel::{select, tick};
+use dashmap::DashMap;
 use log::info;
 
 use crate::{error::ChainError, types::Hash};
@@ -20,19 +21,22 @@ pub use tx::*;
 pub struct Node<S, P> {
     pub addr: String,
     pub miner: String,
-    pub peers: DashSet<String>,
+    pub peers: DashMap<String, Connected>,
     pub pending_txs: DashMap<Hash, SignedTx>,
 
     pub state: S,
     pub peer_proxy: P,
 }
 
+#[derive(Debug)]
+pub struct Connected(bool);
+
 impl<S, P> Node<S, P>
 where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
-    pub async fn new(
+    pub fn new(
         addr: String,
         miner: String,
         bootstrap_addr: Option<String>,
@@ -44,14 +48,15 @@ where
         let node = Self {
             addr: addr,
             miner: miner,
-            peers: DashSet::new(),
+            peers: DashMap::new(),
             pending_txs: DashMap::new(),
             state: state,
             peer_proxy: peer_proxy,
         };
 
-        if let Some(bootstrap_addr) = bootstrap_addr {
-            node.connect_to_peer(bootstrap_addr).await?;
+        if let Some(peer) = bootstrap_addr {
+            peer.parse::<SocketAddr>()?;
+            node.peers.insert(peer, Connected(false));
         }
 
         Ok(node)
@@ -79,13 +84,16 @@ where
 
     pub fn add_peer(&self, peer: String) -> Result<(), ChainError> {
         peer.parse::<SocketAddr>()?;
-        self.peers.insert(peer);
+        self.peers.insert(peer, Connected(true));
 
         Ok(())
     }
 
     pub fn get_peers(&self) -> Vec<String> {
-        Vec::from_iter(self.peers.clone())
+        self.peers
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect::<Vec<String>>()
     }
 
     pub fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError> {
@@ -108,21 +116,21 @@ where
         self.state.latest_block_number()
     }
 
+    pub fn mine(&self) {
+        let ticker = tick(Duration::from_secs(5));
+
+        loop {
+            select! {
+                recv(ticker) -> _ => {
+                }
+            }
+        }
+    }
+
     fn add_pending_tx(&self, tx: SignedTx, from_peer: &str) -> Result<(), ChainError> {
         tx.check_signature()?;
         info!("Added pending tx {:?} from peer {}", tx, from_peer);
         self.pending_txs.entry(tx.hash()).or_insert(tx);
-
-        Ok(())
-    }
-
-    async fn connect_to_peer(&self, peer: String) -> Result<(), ChainError> {
-        if peer == self.addr {
-            return Ok(());
-        }
-
-        self.peer_proxy.ping(&self.addr, &peer).await?;
-        self.peers.insert(peer);
 
         Ok(())
     }
