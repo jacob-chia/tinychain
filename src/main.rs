@@ -76,7 +76,7 @@ fn main() {
             let miner = node.clone();
             let syncer = node.clone();
 
-            let (block_sender, block_receiver) = bounded(100);
+            let (block_sender, block_receiver) = bounded(1000);
             thread::spawn(move || miner.mine(block_receiver));
             thread::spawn(move || syncer.sync(block_sender));
 

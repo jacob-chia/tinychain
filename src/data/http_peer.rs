@@ -1,5 +1,4 @@
-use log::info;
-use reqwest::blocking::Client;
+use reqwest::{blocking::Client, Url};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
@@ -38,9 +37,29 @@ impl Peer for HttpPeer {
         let mut body = HashMap::new();
         body.insert("addr", my_addr);
 
-        let res = self.post(url).json(&body).send()?;
-        info!("<<< response: {:?}", res);
+        self.post(url).json(&body).send()?;
 
         Ok(())
+    }
+
+    fn get_status(&self, peer_addr: &str) -> Result<crate::node::PeerStatus, ChainError> {
+        let url = format!("http://{}/peer/status", peer_addr);
+        let resp = self.get(url).send()?.json()?;
+
+        Ok(resp)
+    }
+
+    fn get_blocks(
+        &self,
+        peer_addr: &str,
+        offset: u64,
+    ) -> Result<Vec<crate::node::Block>, ChainError> {
+        let url = format!("http://{}/blocks", peer_addr);
+        let params = [("offset", offset.to_string())];
+        let url = Url::parse_with_params(&url, &params).unwrap();
+
+        let resp = self.get(url).send()?.json()?;
+
+        Ok(resp)
     }
 }

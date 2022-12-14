@@ -221,13 +221,13 @@ impl State for FileState {
         Ok(self.latest_block_hash)
     }
 
-    fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError> {
+    fn get_blocks(&self, offset: u64) -> Result<Vec<Block>, ChainError> {
         let db_path = BLOCKDB_PATH.get().unwrap();
         let db = OpenOptions::new().read(true).open(db_path)?;
 
         Ok(BufReader::new(db)
             .lines()
-            .skip(offset)
+            .skip(offset as usize)
             .map(|line| {
                 serde_json::from_str::<BlockKV>(&line.unwrap())
                     .unwrap()
