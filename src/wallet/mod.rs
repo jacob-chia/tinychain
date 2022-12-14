@@ -1,7 +1,8 @@
+use std::{fs, str::FromStr};
+
 use ethers_core::{rand::thread_rng, types::Signature, utils::hash_message};
 use ethers_signers::{LocalWallet, Signer};
 use once_cell::sync::OnceCell;
-use std::{fs, str::FromStr};
 
 use crate::error::ChainError;
 
