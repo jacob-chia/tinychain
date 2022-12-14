@@ -41,7 +41,7 @@ where
                 // 收到来自其他节点的区块，此时尚未开始挖矿
                 recv(block_receiver) -> block => {
                     if let Ok(block) = block {
-                        info!("Received a block (hash: {}) from another peer.",block.hash());
+                        info!("Received a block ({}) from another peer.", block.hash());
                         self.add_block(block);
                     }
                 }
@@ -60,7 +60,7 @@ where
             // 若收到新的区块，取消本次挖矿
             if let Ok(block) = block_receiver.try_recv() {
                 info!(
-                    "Mining cancelled. Received a block (hash: {}) from another peer.",
+                    "Mining cancelled. Received a block ({}) from another peer.",
                     block.hash()
                 );
                 self.add_block(block);
