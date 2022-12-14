@@ -1,10 +1,9 @@
 use std::mem;
 
-use ethers_core::utils::hash_message;
 use serde::{Deserialize, Serialize};
 
 use super::SignedTx;
-use crate::types::Hash;
+use crate::{types::Hash, utils::hash_message};
 
 const BLOCK_REWORD: u64 = 100;
 
@@ -34,7 +33,7 @@ impl<'a> Block {
 
     pub fn hash(&self) -> Hash {
         let encoded = serde_json::to_string(self).unwrap();
-        hash_message(encoded)
+        hash_message(&encoded)
     }
 
     pub fn block_reward(&self) -> u64 {

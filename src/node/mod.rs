@@ -1,4 +1,8 @@
-use std::{collections::HashMap, net::SocketAddr, time::Duration};
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::{Arc, RwLock},
+};
 
 use dashmap::DashMap;
 use log::info;
@@ -23,8 +27,9 @@ pub struct Node<S, P> {
     pub miner: String,
     pub peers: DashMap<String, Connected>,
     pub pending_txs: DashMap<Hash, SignedTx>,
+    pub mining_difficulty: usize,
 
-    pub state: S,
+    pub state: Arc<RwLock<S>>,
     pub peer_proxy: P,
 }
 
@@ -50,7 +55,8 @@ where
             miner: miner,
             peers: DashMap::new(),
             pending_txs: DashMap::new(),
-            state: state,
+            mining_difficulty: state.get_mining_difficulty(),
+            state: Arc::new(RwLock::new(state)),
             peer_proxy: peer_proxy,
         };
 
@@ -65,7 +71,7 @@ where
     }
 
     pub fn add_tx(&self, from: &str, to: &str, value: u64) -> Result<(), ChainError> {
-        let next_nonce = self.state.next_account_nonce(from);
+        let next_nonce = self.state.read().unwrap().next_account_nonce(from);
         let tx = Tx::builder()
             .from(from)
             .to(to)
@@ -78,10 +84,14 @@ where
     }
 
     pub fn get_pending_txs(&self) -> Vec<SignedTx> {
-        self.pending_txs
+        let mut txs = self
+            .pending_txs
             .iter()
             .map(|entry| entry.value().clone())
-            .collect::<Vec<SignedTx>>()
+            .collect::<Vec<SignedTx>>();
+
+        txs.sort_by(|tx1, tx2| tx1.time().cmp(&tx2.time()));
+        txs
     }
 
     pub fn add_peer(&self, peer: String) -> Result<(), ChainError> {
@@ -101,23 +111,27 @@ where
     }
 
     pub fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError> {
-        self.state.get_blocks(offset)
+        self.state.read().unwrap().get_blocks(offset)
     }
 
     pub fn get_block(&self, number: u64) -> Result<Block, ChainError> {
-        self.state.get_block(number)
+        self.state.read().unwrap().get_block(number)
     }
 
     pub fn get_balances(&self) -> HashMap<String, u64> {
-        self.state.get_balances()
+        self.state.read().unwrap().get_balances()
     }
 
     pub fn latest_block_hash(&self) -> Hash {
-        self.state.latest_block_hash()
+        self.state.read().unwrap().latest_block_hash()
     }
 
     pub fn latest_block_number(&self) -> u64 {
-        self.state.latest_block_number()
+        self.state.read().unwrap().latest_block_number()
+    }
+
+    pub fn next_block_number(&self) -> u64 {
+        self.state.read().unwrap().next_block_number()
     }
 
     fn add_pending_tx(&self, tx: SignedTx, from_peer: &str) -> Result<(), ChainError> {
@@ -126,6 +140,12 @@ where
         self.pending_txs.entry(tx.hash()).or_insert(tx);
 
         Ok(())
+    }
+
+    fn remove_mined_txs(&self, block: &Block) {
+        for tx in &block.txs {
+            self.pending_txs.remove(&tx.hash());
+        }
     }
 
     fn remove_peer(&self, peer: &str) {

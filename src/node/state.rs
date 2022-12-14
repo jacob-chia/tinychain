@@ -13,4 +13,5 @@ pub trait State {
     fn add_block(&mut self, block: Block) -> Result<Hash, ChainError>;
     fn get_blocks(&self, offset: usize) -> Result<Vec<Block>, ChainError>;
     fn get_block(&self, number: u64) -> Result<Block, ChainError>;
+    fn get_mining_difficulty(&self) -> usize;
 }
