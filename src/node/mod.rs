@@ -70,6 +70,7 @@ where
         Ok(node)
     }
 
+    /// 发送一笔交易（Tx）。
     pub fn transfer(&self, from: &str, to: &str, value: u64) -> Result<(), ChainError> {
         let next_nonce = self.state.read().unwrap().next_account_nonce(from);
         let tx = Tx::builder()
@@ -83,6 +84,7 @@ where
         self.add_pending_tx(tx, &self.addr)
     }
 
+    /// 获取未生成区块的Tx，注意要按交易时间排序。
     pub fn get_pending_txs(&self) -> Vec<SignedTx> {
         let mut txs = self
             .pending_txs
@@ -94,6 +96,7 @@ where
         txs
     }
 
+    /// 添加 peer。当收到来自其他 peer 的 ping 时执行此操作。
     pub fn add_peer(&self, peer: String) -> Result<(), ChainError> {
         peer.parse::<SocketAddr>()?;
         if peer != self.addr {
@@ -103,6 +106,7 @@ where
         Ok(())
     }
 
+    /// 获取本节点知道的 peers。
     pub fn get_peers(&self) -> Vec<String> {
         self.peers
             .iter()
@@ -110,33 +114,39 @@ where
             .collect::<Vec<String>>()
     }
 
+    /// 获取从 offset (即number) 处开始的所有区块。
     pub fn get_blocks(&self, offset: u64) -> Result<Vec<Block>, ChainError> {
         self.state.read().unwrap().get_blocks(offset)
     }
 
+    /// 获取指定 number 的区块
     pub fn get_block(&self, number: u64) -> Result<Block, ChainError> {
         self.state.read().unwrap().get_block(number)
     }
 
+    /// 获取所有人的余额
     pub fn get_balances(&self) -> HashMap<String, u64> {
         self.state.read().unwrap().get_balances()
     }
 
+    /// 获取最新的区块 hash
     pub fn latest_block_hash(&self) -> Hash {
         self.state.read().unwrap().latest_block_hash()
     }
 
+    /// 获取最新的区块 number
     pub fn latest_block_number(&self) -> u64 {
         self.state.read().unwrap().latest_block_number()
     }
 
+    /// 获取下一个区块 number
     pub fn next_block_number(&self) -> u64 {
         self.state.read().unwrap().next_block_number()
     }
 
-    fn add_pending_tx(&self, tx: SignedTx, from_peer: &str) -> Result<(), ChainError> {
+    fn add_pending_tx(&self, tx: SignedTx, peer_addr: &str) -> Result<(), ChainError> {
         tx.check_signature()?;
-        info!("Added pending tx {:?} from peer {}", tx, from_peer);
+        info!("Added pending tx {:?} from peer {}", tx, peer_addr);
         self.pending_txs.entry(tx.hash()).or_insert(tx);
 
         Ok(())

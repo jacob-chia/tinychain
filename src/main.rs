@@ -69,22 +69,27 @@ fn main() {
             wallet::init_keystore_dir(&datadir);
             data::init_database_dir(&datadir);
 
-            let file_state = FileState::new(MINING_DIFFICULTY).unwrap();
-            let http_peer = HttpPeer::new();
-            let node =
-                Arc::new(Node::new(addr, miner, bootstrap_addr, file_state, http_peer).unwrap());
+            let node = new_arc_node(addr, miner, bootstrap_addr);
             let miner = node.clone();
             let syncer = node.clone();
 
             let (block_sender, block_receiver) = bounded(1000);
-            thread::spawn(move || miner.mine(block_receiver));
+            // 从其他Peers同步数据，当同步到新区块时，通过 block_sender 发送给 miner
             thread::spawn(move || syncer.sync(block_sender));
-
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .unwrap()
-                .block_on(server::run(node))
+            // 挖矿过程中若收到其他peers的区块，会取消本次挖矿，添加收到的区块
+            thread::spawn(move || miner.mine(block_receiver));
+            // HTTP Server
+            server::run(node);
         }
     }
+}
+
+fn new_arc_node(
+    addr: String,
+    miner: String,
+    bootstrap_addr: Option<String>,
+) -> Arc<Node<FileState, HttpPeer>> {
+    let file_state = FileState::new(MINING_DIFFICULTY).unwrap();
+    let http_peer = HttpPeer::new();
+    Arc::new(Node::new(addr, miner, bootstrap_addr, file_state, http_peer).unwrap())
 }

@@ -1,10 +1,11 @@
-use log::info;
-use once_cell::sync::OnceCell;
 use std::{
     collections::HashMap,
     fs::OpenOptions,
     io::{BufRead, BufReader, Write},
 };
+
+use log::info;
+use once_cell::sync::OnceCell;
 
 use crate::{
     error::ChainError,
@@ -211,8 +212,7 @@ impl State for FileState {
     }
 
     fn add_block(&mut self, block: Block) -> Result<Hash, ChainError> {
-        // Why clone?
-        // To prevent the state from being corrupted by invalid blocks.
+        // 修改state前先克隆一份，防止出错时无法回滚state。
         let mut state = self.clone();
         state.apply_block(block)?;
         state.persist()?;
