@@ -1,9 +1,10 @@
-use serde::Deserialize;
 use std::{
     collections::HashMap,
     fs::{self, File},
     path::Path,
 };
+
+use serde::Deserialize;
 
 use super::{BLOCKDB_PATH, DATABASE_DIR, GENESIS_PATH};
 use crate::error::ChainError;

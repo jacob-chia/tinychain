@@ -1,8 +1,7 @@
 use serde::Deserialize;
 
-use crate::{error::ChainError, types::Hash};
-
 use super::{Block, SignedTx};
+use crate::{error::ChainError, types::Hash};
 
 #[derive(Debug, Deserialize)]
 pub struct PeerStatus {

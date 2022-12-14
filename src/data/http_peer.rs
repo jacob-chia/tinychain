@@ -1,8 +1,9 @@
-use reqwest::{blocking::Client, Url};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
 };
+
+use reqwest::{blocking::Client, Url};
 
 use crate::{error::ChainError, node::Peer};
 
@@ -15,7 +16,8 @@ impl HttpPeer {
     }
 }
 
-// TODO
+/// Deref/DerefMut 可以让 HttpPeer 直接使用 Client 的方法。
+/// 比如 self.get(url)。
 impl Deref for HttpPeer {
     type Target = Client;
 

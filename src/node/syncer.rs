@@ -5,13 +5,16 @@ use log::error;
 
 use super::*;
 
+const SYNC_INTERVAL: u64 = 10;
+
 impl<S, P> Node<S, P>
 where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
     pub fn sync(&self, block_sender: Sender<Block>) {
-        let ticker = tick(Duration::from_secs(10));
+        info!("Syncer is running ====================");
+        let ticker = tick(Duration::from_secs(SYNC_INTERVAL));
 
         loop {
             ticker.recv().unwrap();
@@ -31,12 +34,12 @@ where
         connected: &Connected,
         block_sender: Sender<Block>,
     ) -> Result<(), ChainError> {
-        info!("Syncing from {} ...", peer_addr);
         if connected.0 == false {
             self.connect_to_peer(peer_addr)?;
         }
 
         let peer_status = self.peer_proxy.get_status(peer_addr)?;
+        info!("Sync from {peer_addr}, peer_status: {:?}", peer_status);
         self.sync_peers(peer_status.peers);
         self.sync_blocks(peer_status.number, peer_addr, block_sender)?;
         self.sync_pending_txs(peer_status.pending_txs, peer_addr)?;
@@ -47,6 +50,7 @@ where
     fn connect_to_peer(&self, peer_addr: &str) -> Result<(), ChainError> {
         self.peer_proxy.ping(&self.addr, peer_addr)?;
         *self.peers.get_mut(peer_addr).unwrap() = Connected(true);
+        info!("Connected to {peer_addr}");
 
         Ok(())
     }
