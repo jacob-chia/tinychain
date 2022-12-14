@@ -1,4 +1,4 @@
-use crossbeam_channel::{select, tick};
+use crossbeam_channel::tick;
 
 use super::*;
 
@@ -11,10 +11,28 @@ where
         let ticker = tick(Duration::from_secs(10));
 
         loop {
-            select! {
-                recv(ticker) -> _ => {
+            ticker.recv().unwrap();
+            self.peers.iter().for_each(|ref peer| {
+                if self.sync_from_peer(peer.key(), peer.value()).is_err() {
+                    self.remove_peer(peer.key());
                 }
-            }
+            });
         }
+    }
+
+    fn sync_from_peer(&self, peer_addr: &str, connected: &Connected) -> Result<(), ChainError> {
+        info!("Syncing from {} ...", peer_addr);
+        if connected.0 == false {
+            self.connect_to_peer(peer_addr)?;
+        }
+
+        Ok(())
+    }
+
+    fn connect_to_peer(&self, peer_addr: &str) -> Result<(), ChainError> {
+        self.peer_proxy.ping(&self.addr, peer_addr)?;
+        *self.peers.get_mut(peer_addr).unwrap() = Connected(true);
+
+        Ok(())
     }
 }

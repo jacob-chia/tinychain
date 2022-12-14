@@ -56,7 +56,9 @@ where
 
         if let Some(peer) = bootstrap_addr {
             peer.parse::<SocketAddr>()?;
-            node.peers.insert(peer, Connected(false));
+            if peer != node.addr {
+                node.peers.insert(peer, Connected(false));
+            }
         }
 
         Ok(node)
@@ -84,7 +86,9 @@ where
 
     pub fn add_peer(&self, peer: String) -> Result<(), ChainError> {
         peer.parse::<SocketAddr>()?;
-        self.peers.insert(peer, Connected(true));
+        if peer != self.addr {
+            self.peers.insert(peer, Connected(true));
+        }
 
         Ok(())
     }
@@ -122,5 +126,9 @@ where
         self.pending_txs.entry(tx.hash()).or_insert(tx);
 
         Ok(())
+    }
+
+    fn remove_peer(&self, peer: &str) {
+        self.peers.remove(peer);
     }
 }
