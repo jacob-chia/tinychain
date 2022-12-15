@@ -81,14 +81,12 @@ struct NonceReq {
 async fn next_account_nonce<S, P>(
     Query(params): Query<NonceReq>,
     Extension(node): Extension<Arc<Node<S, P>>>,
-) -> Result<impl IntoResponse, ChainError>
+) -> impl IntoResponse
 where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
-    node.next_account_nonce(&params.account)?;
-
-    Ok(Json(json!({"success": true})))
+    Json(json!({ "nonce": node.next_account_nonce(&params.account) }))
 }
 
 #[derive(Debug, Deserialize)]

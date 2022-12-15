@@ -20,4 +20,3 @@ axum = "0.5"        # HTTP Server
 reqwest = { version = "0.11", features = ["blocking", "json"] } # HTTP Client
 tokio = { version = "1.21", features = ["full"] } # 异步运行时
 crossbeam-channel = "0.5" # 更好的channel
-crossbeam-utils = "0.8"
