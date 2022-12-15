@@ -15,20 +15,27 @@
 
 ```sh
 src
-├── database       # 数据层
-│   ├── block.rs   # 区块相关
-│   ├── genesis.rs # 区块链的初始状态
-│   ├── mod.rs     # 入口
-│   ├── state.rs   # 区块链的当前状态（所有账户的余额、Nonce，最新的区块，当前挖矿难度等）
-│   └── tx.rs      # Transaction相关
-├── main.rs        # 入口。命令行解析，执行对应的命令
-├── node           # 生成区块、Peers间区块同步、Http Server
-└── wallet         # 钱包。账户管理、签名、验签
+├── main.rs       # 程序入口
+├── node          # 核心业务逻辑
+│   ├── block.rs  # Block 结构与方法
+│   ├── miner.rs  # 生成区块的相关功能
+│   ├── mod.rs    # Node 结构与方法
+│   ├── syncer.rs # 与其他Peer同步数据
+│   ├── tx.rs     # Tx 结构与方法
+│   ├── state.rs  # 区块链状态 trait 定义，依赖倒置原则
+│   └── peer.rs   # Peer trait 定义，定义其他Peer应实现的方法
+├── server/       # HTTP Server，定义路由、请求/响应格式，不包含业务逻辑
+├── data/         # 业务数据源，包含本地数据和其他 Peer 中的数据。实现了 Node 定义的 traits
+├── error.rs      # 错误类型，不同的错误类型可返回不同的 HTTP Status
+├── types.rs      # 自定义类型，目前只包含 Hash 类型
+├── utils.rs      # 工具方法
+└── wallet/       # 钱包。生成账户、签名、验签等
 ```
 
 ## 代码导读
 
 - [Office Hour 1](doc/office-hour-1.md): 命令行解析、账户管理、状态管理。
+- [Office Hour 2](doc/office-hour-2.md): 完整的 Tiny Chain。生成区块、与其他节点同步数据、HTTP Server 等。
 
 ----
 

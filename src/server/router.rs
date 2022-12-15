@@ -25,6 +25,7 @@ where
         .route("/blocks", get(get_blocks::<S, P>))
         .route("/blocks/:number", get(get_block::<S, P>))
         .route("/balances", get(get_balances::<S, P>))
+        .route("/account/nonce", get(next_account_nonce::<S, P>))
         .route("/transfer", post(transfer::<S, P>))
         .route("/peer/ping", post(ping_peer::<S, P>))
         .route("/peer/status", get(get_peer_status::<S, P>))
@@ -73,10 +74,29 @@ where
 }
 
 #[derive(Debug, Deserialize)]
+struct NonceReq {
+    account: String,
+}
+
+async fn next_account_nonce<S, P>(
+    Query(params): Query<NonceReq>,
+    Extension(node): Extension<Arc<Node<S, P>>>,
+) -> Result<impl IntoResponse, ChainError>
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
+    node.next_account_nonce(&params.account)?;
+
+    Ok(Json(json!({"success": true})))
+}
+
+#[derive(Debug, Deserialize)]
 struct TxReq {
     from: String,
     to: String,
     value: u64,
+    nonce: u64,
 }
 
 async fn transfer<S, P>(
@@ -87,7 +107,7 @@ where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
-    node.transfer(&tx.from, &tx.to, tx.value)?;
+    node.transfer(&tx.from, &tx.to, tx.value, tx.nonce)?;
 
     Ok(Json(json!({"success": true})))
 }
