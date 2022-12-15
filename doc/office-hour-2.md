@@ -41,9 +41,15 @@ curl http://localhost:8000/blocks/2 | jq
 
 curl http://localhost:8000/balances | jq
 
-curl -X POST http://localhost:8000/txs \
+# Treasury -> Alice: 5000
+curl -X POST http://localhost:8000/transfer \
   -H 'Content-Type: application/json' \
-  -d '{"from": "3d211869-2505-4394-bd99-0c76eb761bf9", "to": "16d5e01e-709a-4536-a4f2-9f069070c51a", "value": 50}'
+  -d '{"from": "2bde5a91-6411-46ba-9173-c3e075d32100", "to": "3d211869-2505-4394-bd99-0c76eb761bf9", "value": 5000}'
+
+# Treasury -> Bob: 5000
+curl -X POST http://localhost:8000/transfer \
+  -H 'Content-Type: application/json' \
+  -d '{"from": "2bde5a91-6411-46ba-9173-c3e075d32100", "to": "16d5e01e-709a-4536-a4f2-9f069070c51a", "value": 5000}'
 
 curl -X POST http://localhost:8000/peers \
   -H 'Content-Type: application/json' \

@@ -33,7 +33,7 @@ pub struct Node<S, P> {
     pub peer_proxy: P,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Connected(bool);
 
 impl<S, P> Node<S, P>
@@ -108,9 +108,14 @@ where
 
     /// 获取本节点知道的 peers。
     pub fn get_peers(&self) -> Vec<String> {
-        self.peers
-            .iter()
-            .map(|entry| entry.key().clone())
+        // 先克隆一份出来，尽早释放 self.peers 中的锁。
+        // 这里执行 peers.clone() 并不会有太大的开销，因为返回值 Vec<String> 是要拿到 peer_addr 的所有权的
+        // 即使这里不 clone()，在后面的 map 操作中也需要执行 peer_addr.clone()
+        let peers = self.peers.clone();
+
+        peers
+            .into_iter()
+            .map(|(peer, _)| peer)
             .collect::<Vec<String>>()
     }
 
