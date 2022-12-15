@@ -28,15 +28,15 @@ pub enum ChainError {
     BlockNotFound(u64),
 
     // 406: Not Acceptable (Sync Error)
-    #[error("Invalid block number: expected '{0}', not '{0}'")]
+    #[error("Invalid block number: expected '{0}', not '{1}'")]
     InvalidBlockNumber(u64, u64),
-    #[error("Invalid block parent: expected '{0}', not '{0}'")]
+    #[error("Invalid block parent: expected '{0}', not '{1}'")]
     InvalidBlockParent(Hash, Hash),
     #[error("Block hash '{0}' donot meet the mining difficulty '{1}'")]
     InvalidBlockHash(Hash, usize),
     #[error("Invalid tx signature")]
     InvalidTxSignature(#[from] SignatureError),
-    #[error("Invalid tx nonce: expected '{0}', not '{0}'")]
+    #[error("Invalid tx nonce: expected '{0}', not '{1}'")]
     InvalidTxNonce(u64, u64),
 
     // 500: Internal Server Error

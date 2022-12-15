@@ -1,11 +1,11 @@
 use std::time::Duration;
 
 use crossbeam_channel::{tick, Sender};
-use log::error;
+use log::{debug, error};
 
 use super::*;
 
-const SYNC_INTERVAL: u64 = 10;
+const SYNC_INTERVAL: u64 = 30;
 
 impl<S, P> Node<S, P>
 where
@@ -47,7 +47,7 @@ where
         }
 
         let peer_status = self.peer_proxy.get_status(peer_addr)?;
-        info!("Sync from {peer_addr}, peer_status: {:?}", peer_status);
+        debug!("Sync from {peer_addr}, peer_status: {:?}", peer_status);
         self.sync_peers(peer_status.peers);
         self.sync_blocks(peer_status.number, peer_addr, block_sender)?;
         self.sync_pending_txs(peer_status.pending_txs, peer_addr)?;
