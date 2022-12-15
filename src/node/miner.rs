@@ -14,7 +14,7 @@ where
     P: Peer + Send + Sync + 'static,
 {
     pub fn mine(&self, block_receiver: Receiver<Block>) {
-        info!("Miner is running ====================");
+        info!("Miner is running");
         let ticker = tick(Duration::from_secs(MINE_INTERVAL));
 
         loop {
@@ -74,15 +74,15 @@ where
             block.update_nonce(utils::gen_random_number());
         }
 
-        info!("Mined new Block '{}' using PoW🎉🎉🎉:", block.hash());
+        info!("Mined new Block '{}' 🎉🎉🎉:", block.hash());
         info!("\tHeight: '{}'", block.header.number);
         info!("\tNonce: '{}'", block.header.nonce);
         info!("\tCreated: '{}'", block.header.time);
         info!("\tMiner: '{}'", block.header.miner);
-        info!("\tParent: '{}'\n", block.header.parent);
+        info!("\tParent: '{}'", block.header.parent);
         info!("\tAttempt: '{}'", attempt);
         info!("\tTime: {:?}", timer.elapsed());
-        info!("🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉\n");
+        info!("🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉\n");
 
         Some(block)
     }

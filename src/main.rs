@@ -15,7 +15,7 @@ mod wallet;
 use data::{FileState, HttpPeer};
 use node::Node;
 
-const MINING_DIFFICULTY: usize = 3;
+const MINING_DIFFICULTY: usize = 2;
 
 /// The command of tiny-chain
 #[derive(Debug, Parser)]

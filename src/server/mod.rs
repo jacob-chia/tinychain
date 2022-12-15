@@ -13,7 +13,7 @@ where
     P: Peer + Send + Sync + 'static,
 {
     let addr = node.addr.parse().unwrap();
-    info!("HTTP server listening on {addr} ====================");
+    info!("HTTP server listening on {addr}");
 
     // 创建异步运行时处理 I/O 密集型任务
     let runtime = tokio::runtime::Builder::new_multi_thread()

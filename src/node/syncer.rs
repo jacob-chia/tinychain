@@ -13,16 +13,20 @@ where
     P: Peer + Send + Sync + 'static,
 {
     pub fn sync(&self, block_sender: Sender<Block>) {
-        info!("Syncer is running ====================");
+        info!("Syncer is running");
         let ticker = tick(Duration::from_secs(SYNC_INTERVAL));
 
         loop {
             ticker.recv().unwrap();
-            for peer in &self.peers {
-                let (peer_addr, connected) = (peer.key(), peer.value());
-                if let Err(err) = self.sync_from_peer(peer_addr, connected, block_sender.clone()) {
-                    error!("Failed to sync from {peer_addr}: {err}. Disconnect from it.",);
-                    self.remove_peer(peer_addr);
+            // 遍历self.peers，在遍历过程中需要修改 self.peers (添加新发现的peers，删除通信出错的peers)
+            // 这种操作会引发死锁 （https://docs.rs/dashmap/latest/dashmap/struct.DashMap.html#method.remove）
+            // 所以先克隆一份，在 peers_clone 上遍历，在 self.peers 上修改，这样就不会死锁了。
+            let peers = self.peers.clone();
+
+            for (peer_addr, connected) in peers {
+                if let Err(err) = self.sync_from_peer(&peer_addr, connected, block_sender.clone()) {
+                    error!("{err}. Disconnect from {peer_addr}");
+                    self.remove_peer(&peer_addr);
                 }
             }
         }
@@ -31,9 +35,13 @@ where
     fn sync_from_peer(
         &self,
         peer_addr: &str,
-        connected: &Connected,
+        connected: Connected,
         block_sender: Sender<Block>,
     ) -> Result<(), ChainError> {
+        if self.addr == peer_addr {
+            return Ok(());
+        }
+
         if connected.0 == false {
             self.connect_to_peer(peer_addr)?;
         }
