@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crossbeam_channel::{tick, Sender};
-use log::{debug, error};
+use log::error;
 
 use super::*;
 
@@ -47,7 +47,7 @@ where
         }
 
         let peer_status = self.peer_proxy.get_status(peer_addr)?;
-        debug!("Sync from {peer_addr}, peer_status: {:?}", peer_status);
+        info!("Sync from {peer_addr}, peer_status: {:?}", peer_status);
         self.sync_peers(peer_status.peers);
         self.sync_blocks(peer_status.number, peer_addr, block_sender)?;
         self.sync_pending_txs(peer_status.pending_txs, peer_addr)?;
