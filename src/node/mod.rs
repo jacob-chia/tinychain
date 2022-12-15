@@ -70,8 +70,8 @@ where
         Ok(node)
     }
 
-    pub fn next_account_nonce(&self, account: &str) -> Result<u64, ChainError> {
-        Ok(self.state.read().unwrap().next_account_nonce(account))
+    pub fn next_account_nonce(&self, account: &str) -> u64 {
+        self.state.read().unwrap().next_account_nonce(account)
     }
 
     /// 发送一笔交易（Tx）。
