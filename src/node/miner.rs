@@ -88,9 +88,9 @@ where
     }
 
     fn add_block(&self, block: Block) {
-        self.remove_mined_txs(&block);
-        if let Err(err) = self.state.write().unwrap().add_block(block) {
+        if let Err(err) = self.state.write().unwrap().add_block(block.clone()) {
             error!("Failed to add block: {}", err);
         }
+        self.remove_mined_txs(&block);
     }
 }

@@ -70,14 +70,17 @@ where
         Ok(node)
     }
 
+    pub fn next_account_nonce(&self, account: &str) -> Result<u64, ChainError> {
+        Ok(self.state.read().unwrap().next_account_nonce(account))
+    }
+
     /// 发送一笔交易（Tx）。
-    pub fn transfer(&self, from: &str, to: &str, value: u64) -> Result<(), ChainError> {
-        let next_nonce = self.state.read().unwrap().next_account_nonce(from);
+    pub fn transfer(&self, from: &str, to: &str, value: u64, nonce: u64) -> Result<(), ChainError> {
         let tx = Tx::builder()
             .from(from)
             .to(to)
             .value(value)
-            .nonce(next_nonce)
+            .nonce(nonce)
             .build()
             .sign()?;
 
