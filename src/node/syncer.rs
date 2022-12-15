@@ -41,16 +41,19 @@ where
         if self.addr == peer_addr {
             return Ok(());
         }
-
         if connected.0 == false {
             self.connect_to_peer(peer_addr)?;
         }
 
         let peer_status = self.peer_proxy.get_status(peer_addr)?;
-        info!("Sync from {peer_addr}, peer_status: {:?}", peer_status);
         self.sync_peers(peer_status.peers);
-        self.sync_blocks(peer_status.number, peer_addr, block_sender)?;
-        self.sync_pending_txs(peer_status.pending_txs, peer_addr)?;
+
+        if let Some(count) = self.height_difference(peer_status.number, peer_status.hash) {
+            info!("Found {} new blocks from {}", count, peer_addr);
+
+            self.sync_blocks(peer_addr, block_sender)?;
+            self.sync_pending_txs(peer_status.pending_txs, peer_addr)?;
+        }
 
         Ok(())
     }
@@ -69,20 +72,27 @@ where
         }
     }
 
-    fn sync_blocks(
-        &self,
-        peer_block_number: u64,
-        peer_addr: &str,
-        block_sender: Sender<Block>,
-    ) -> Result<(), ChainError> {
-        let local_block_number = self.latest_block_number();
-        if local_block_number >= peer_block_number {
-            return Ok(());
+    fn height_difference(&self, peer_number: u64, peer_hash: Hash) -> Option<u64> {
+        let local_number = self.latest_block_number();
+        if peer_hash.is_zero() || local_number > peer_number {
+            return None;
+        }
+        if self.latest_block_hash().is_zero() {
+            return Some(peer_number + 1);
         }
 
-        let count = peer_block_number - local_block_number;
-        info!("Found {} new blocks from peer {}", count, peer_addr);
-        let blocks = self.peer_proxy.get_blocks(peer_addr, local_block_number)?;
+        let count = peer_number - local_number;
+        if count > 0 {
+            return Some(count);
+        }
+
+        None
+    }
+
+    fn sync_blocks(&self, peer_addr: &str, block_sender: Sender<Block>) -> Result<(), ChainError> {
+        let offset = self.latest_block_number();
+
+        let blocks = self.peer_proxy.get_blocks(peer_addr, offset)?;
         for block in blocks {
             block_sender.send(block).unwrap();
         }
@@ -91,6 +101,10 @@ where
     }
 
     fn sync_pending_txs(&self, txs: Vec<SignedTx>, peer_addr: &str) -> Result<(), ChainError> {
+        if !txs.is_empty() {
+            info!("Found new pending_txs from {}: {:?}", peer_addr, txs);
+        }
+
         for tx in txs {
             self.add_pending_tx(tx, peer_addr)?;
         }

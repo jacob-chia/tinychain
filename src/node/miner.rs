@@ -6,7 +6,7 @@ use log::error;
 use super::*;
 use crate::utils;
 
-const MINE_INTERVAL: u64 = 5;
+const MINE_INTERVAL: u64 = 10;
 
 impl<S, P> Node<S, P>
 where

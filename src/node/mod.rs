@@ -26,10 +26,12 @@ pub struct Node<S, P> {
     pub addr: String,
     pub miner: String,
     pub peers: DashMap<String, Connected>,
+    // 尚未生成区块的TXs
     pub pending_txs: DashMap<Hash, SignedTx>,
     pub mining_difficulty: usize,
 
     pub state: Arc<RwLock<S>>,
+    // Peer的代理，通过 peer_proxy 获取其他 peers 的数据
     pub peer_proxy: P,
 }
 
@@ -89,10 +91,14 @@ where
 
     /// 获取未生成区块的Tx，注意要按交易时间排序。
     pub fn get_pending_txs(&self) -> Vec<SignedTx> {
-        let mut txs = self
-            .pending_txs
-            .iter()
-            .map(|entry| entry.value().clone())
+        // 先克隆一份出来，尽早释放 self.pending_txs 中的锁。
+        // 这里执行 clone() 并不会有太大的开销，因为返回值 需要拿到 SignedTx 的所有权
+        // 即使这里不 clone()，在后面的 map 操作中也需要执行 clone()
+        let pending_txs = self.pending_txs.clone();
+
+        let mut txs = pending_txs
+            .into_iter()
+            .map(|(_, tx)| tx)
             .collect::<Vec<SignedTx>>();
 
         txs.sort_by(|tx1, tx2| tx1.time().cmp(&tx2.time()));
@@ -103,6 +109,7 @@ where
     pub fn add_peer(&self, peer: String) -> Result<(), ChainError> {
         peer.parse::<SocketAddr>()?;
         if peer != self.addr {
+            info!("Connected to {peer}");
             self.peers.insert(peer, Connected(true));
         }
 
@@ -112,8 +119,8 @@ where
     /// 获取本节点知道的 peers。
     pub fn get_peers(&self) -> Vec<String> {
         // 先克隆一份出来，尽早释放 self.peers 中的锁。
-        // 这里执行 peers.clone() 并不会有太大的开销，因为返回值 Vec<String> 是要拿到 peer_addr 的所有权的
-        // 即使这里不 clone()，在后面的 map 操作中也需要执行 peer_addr.clone()
+        // 这里执行 clone() 并不会有太大的开销，因为返回值 需要拿到 peer_addr 的所有权
+        // 即使这里不 clone()，在后面的 map 操作中也需要执行 clone()
         let peers = self.peers.clone();
 
         peers
