@@ -14,7 +14,7 @@
 
 ### 分支
 
-`git switch 01-wallet-database`
+`git switch 01-wallet-database-v0.1-20221125`
 
 ### 代码结构
 
