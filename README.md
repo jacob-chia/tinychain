@@ -11,12 +11,18 @@
 - 存储：`文件`存储
 - 账户管理：为了简化演示流程，`所有账户密码、地址、公私钥均存储在后端`，用户只持有account_id（UUID格式）。用户发送Tx（即Transaction）时不需要签署，节点在生成区块时自动签署。
 
+## 架构设计
+
+### 分层
+
+
+
 ## 代码结构
 
 ```sh
 src
 ├── main.rs       # 程序入口
-├── node          # 核心业务逻辑
+├── node          # ⚡核心业务逻辑
 │   ├── block.rs  # Block 结构与方法
 │   ├── miner.rs  # 生成区块的相关功能
 │   ├── mod.rs    # Node 结构与方法
@@ -34,8 +40,8 @@ src
 
 ## 代码导读
 
-- [Office Hour 1](doc/office-hour-1.md): 命令行解析、账户管理、状态管理。
-- [Office Hour 2](doc/office-hour-2.md): 完整的 Tiny Chain。生成区块、与其他节点同步数据、HTTP Server 等。
+- [Office Hour 1](doc/01-main-wallet-structs.md): main 命令行解析、wallet 账户管理、基本数据结构与方法。
+- [Office Hour 2](doc/02-syncer-miner-server.md): syncer 同步其他节点的数据、miner 生成区块、HTTP Server。
 
 ----
 
