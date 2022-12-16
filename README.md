@@ -15,7 +15,21 @@
 
 ### 分层
 
+![](img/tiny-chain-arch.png)
 
+- Server 层可随意替换任意框架，不需要改动 Node
+- 将 Node 中的不稳定因素（存储方式、Peer通信协议）抽象成trait，方便以后扩展。符合`开闭原则`（OCP，对扩展开放，对修改关闭）
+- Node（核心业务逻辑）不依赖 Data（业务数据源），Data 需要实现 Node 定义的 trait。符合`依赖反转原则`（DIP）
+
+### 运行时
+
+![](img/tiny-chain-runtime.png)
+
+- `HTTP Server`: I/O密集型任务，异步多线程
+- `Miner`：计算密集型任务，同步单线程
+- `Syncer`: 同步、异步均可
+
+> 拓展阅读：什么时候不需要异步运行时？`https://tokio.rs/tokio/tutorial#when-not-to-use-tokio`
 
 ## 代码结构
 

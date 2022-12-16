@@ -15,8 +15,8 @@ log = "0.4"         # 日志
 env_logger = "0.9"  # 日志
 serde = { version = "1.0", features = ["derive"] } # 序列化/反序列化
 serde_json = "1.0"  # 序列化/反序列化
-dashmap = "5.4"     # 并发 HashMap
-axum = "0.5"        # HTTP Server
+dashmap = "5.4"     # 并发安全的 HashMap
 reqwest = { version = "0.11", features = ["blocking", "json"] } # HTTP Client
+axum = "0.5"        # HTTP Server
 tokio = { version = "1.21", features = ["full"] } # 异步运行时
 crossbeam-channel = "0.5" # 更好的channel
