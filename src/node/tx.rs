@@ -1,20 +1,19 @@
 use serde::{Deserialize, Serialize};
 
-use crate::utils;
-use crate::wallet;
+use crate::{error::ChainError, types::Hash, utils, wallet};
 
 const GAS: u64 = 21;
 const GAS_PRICE: u64 = 1;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Tx {
-    pub(super) from: String,
-    pub(super) to: String,
-    pub(super) value: u64,
-    pub(super) nonce: u64,
-    pub(super) gas: u64,
-    pub(super) gas_price: u64,
-    pub(super) time: u64,
+    pub from: String,
+    pub to: String,
+    pub value: u64,
+    pub nonce: u64,
+    pub gas: u64,
+    pub gas_price: u64,
+    pub time: u64,
 }
 
 impl Tx {
@@ -34,18 +33,22 @@ impl Tx {
         serde_json::to_string(self).unwrap()
     }
 
-    pub fn sign(self) -> SignedTx {
-        let sig = wallet::sign(&self.encode(), &self.from).unwrap();
-        SignedTx { tx: self, sig: sig }
+    pub fn hash(&self) -> Hash {
+        utils::hash_message(&self.encode())
+    }
+
+    pub fn sign(self) -> Result<SignedTx, ChainError> {
+        let sig = wallet::sign(&self.encode(), &self.from)?;
+        Ok(SignedTx { tx: self, sig: sig })
     }
 }
 
 #[derive(Debug, Default)]
 pub struct TxBuilder {
-    pub(super) from: String,
-    pub(super) to: String,
-    pub(super) value: u64,
-    pub(super) nonce: u64,
+    pub from: String,
+    pub to: String,
+    pub value: u64,
+    pub nonce: u64,
 }
 
 impl TxBuilder {
@@ -84,17 +87,25 @@ impl TxBuilder {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SignedTx {
-    pub(super) tx: Tx,
-    pub(super) sig: String,
+    pub tx: Tx,
+    pub sig: String,
 }
 
 impl SignedTx {
-    pub fn is_valid_signature(&self) -> bool {
-        wallet::verify(&self.tx.encode(), &self.sig, &self.tx.from).is_ok()
+    pub fn check_signature(&self) -> Result<(), ChainError> {
+        wallet::verify(&self.tx.encode(), &self.sig, &self.tx.from)
     }
 
     pub fn gas_cost(&self) -> u64 {
         self.tx.gas_cost()
+    }
+
+    pub fn hash(&self) -> Hash {
+        self.tx.hash()
+    }
+
+    pub fn time(&self) -> u64 {
+        self.tx.time
     }
 }
 
