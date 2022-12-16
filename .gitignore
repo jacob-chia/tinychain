@@ -14,3 +14,5 @@ Cargo.lock
 
 /target
 /db/database
+/db1
+/db2

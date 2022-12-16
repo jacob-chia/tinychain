@@ -1,76 +1,170 @@
-use crate::{database::*, utils};
-use anyhow::Result;
-use log::debug;
+use std::{
+    collections::HashMap,
+    net::SocketAddr,
+    sync::{Arc, RwLock},
+};
 
-// 挖矿计算难度
-const MINING_DIFFICULTY: usize = 3;
-// 演示账户
-const TREASURY: &'static str = "2bde5a91-6411-46ba-9173-c3e075d32100";
-const ALICE: &'static str = "3d211869-2505-4394-bd99-0c76eb761bf9";
-const BOB: &'static str = "16d5e01e-709a-4536-a4f2-9f069070c51a";
+use dashmap::DashMap;
+use log::info;
 
-pub fn run(_ip: &str, _port: u16, miner: &str) -> Result<()> {
-    let mut state = State::new(MINING_DIFFICULTY)?;
+use crate::{error::ChainError, types::Hash};
 
-    debug!("Accounts =========================================");
-    debug!("TREASURY: {}", TREASURY);
-    debug!("ALICE   : {}", ALICE);
-    debug!("BOB     : {}", BOB);
-    debug!("MINER   : {}", miner);
+mod block;
+mod miner;
+mod peer;
+mod state;
+mod syncer;
+mod tx;
 
-    print_state(&state);
-    airdrops(&mut state, miner)?;
-    print_state(&state);
+pub use block::*;
+pub use peer::*;
+pub use state::*;
+pub use tx::*;
 
-    Ok(())
+#[derive(Debug)]
+pub struct Node<S, P> {
+    pub addr: String,
+    pub miner: String,
+    pub peers: DashMap<String, Connected>,
+    // 尚未生成区块的TXs
+    pub pending_txs: DashMap<Hash, SignedTx>,
+    pub mining_difficulty: usize,
+
+    pub state: Arc<RwLock<S>>,
+    // Peer的代理，通过 peer_proxy 获取其他 peers 的数据
+    pub peer_proxy: P,
 }
 
-fn airdrops(state: &mut State, miner: &str) -> Result<()> {
-    debug!("Airdrops =========================================");
-    debug!("TREASURY -> ALICE: 100");
-    debug!("TREASURY -> BOB  : 100");
+#[derive(Debug, Clone)]
+pub struct Connected(bool);
 
-    let next_nonce = state.next_account_nonce(TREASURY);
-    let tx1 = Tx::builder()
-        .from(TREASURY)
-        .to(ALICE)
-        .value(100)
-        .nonce(next_nonce)
-        .build()
-        .sign();
+impl<S, P> Node<S, P>
+where
+    S: State + Send + Sync + 'static,
+    P: Peer + Send + Sync + 'static,
+{
+    pub fn new(
+        addr: String,
+        miner: String,
+        bootstrap_addr: Option<String>,
+        state: S,
+        peer_proxy: P,
+    ) -> Result<Self, ChainError> {
+        addr.parse::<SocketAddr>()?;
 
-    let tx2 = Tx::builder()
-        .from(TREASURY)
-        .to(BOB)
-        .value(100)
-        .nonce(next_nonce + 1)
-        .build()
-        .sign();
+        let node = Self {
+            addr: addr,
+            miner: miner,
+            peers: DashMap::new(),
+            pending_txs: DashMap::new(),
+            mining_difficulty: state.get_mining_difficulty(),
+            state: Arc::new(RwLock::new(state)),
+            peer_proxy: peer_proxy,
+        };
 
-    let txs = vec![tx1, tx2];
-    let time = utils::unix_timestamp();
+        if let Some(peer) = bootstrap_addr {
+            peer.parse::<SocketAddr>()?;
+            if peer != node.addr {
+                node.peers.insert(peer, Connected(false));
+            }
+        }
 
-    let parent = state.latest_block_hash().to_owned();
-    let block_number = state.next_block_number();
-    let mut block = Block::builder()
-        .parent(parent)
-        .number(block_number)
-        .nonce(1)
-        .time(time)
-        .miner(miner)
-        .txs(txs)
-        .build();
+        Ok(node)
+    }
 
-    // 需要不断update_nonce -> 计算hash -> 直到hash满足要求
-    block.update_nonce(2);
-    state.add_block(block)?;
+    pub fn next_account_nonce(&self, account: &str) -> u64 {
+        self.state.read().unwrap().next_account_nonce(account)
+    }
 
-    Ok(())
-}
+    /// 发送一笔交易（Tx）。
+    pub fn transfer(&self, from: &str, to: &str, value: u64, nonce: u64) -> Result<(), ChainError> {
+        let tx = Tx::builder()
+            .from(from)
+            .to(to)
+            .value(value)
+            .nonce(nonce)
+            .build()
+            .sign()?;
 
-fn print_state(state: &State) {
-    debug!("Current state =========================================");
-    debug!("balances         : {:?}", state.get_balances());
-    debug!("latest_block     : {:?}", state.latest_block());
-    debug!("latest_block_hash: {:?}", state.latest_block_hash());
+        self.add_pending_tx(tx, &self.addr)
+    }
+
+    /// 获取未生成区块的Tx，注意要按交易时间排序。
+    pub fn get_pending_txs(&self) -> Vec<SignedTx> {
+        let mut txs = self
+            .pending_txs
+            .iter()
+            .map(|entry| entry.value().to_owned())
+            .collect::<Vec<SignedTx>>();
+
+        txs.sort_by(|tx1, tx2| tx1.time().cmp(&tx2.time()));
+        txs
+    }
+
+    /// 添加 peer。当收到来自其他 peer 的 ping 时执行此操作。
+    pub fn add_peer(&self, peer: String) -> Result<(), ChainError> {
+        peer.parse::<SocketAddr>()?;
+        if peer != self.addr {
+            info!("Connected to {peer}");
+            self.peers.insert(peer, Connected(true));
+        }
+
+        Ok(())
+    }
+
+    /// 获取本节点知道的 peers。
+    pub fn get_peers(&self) -> Vec<String> {
+        self.peers
+            .iter()
+            .map(|entry| entry.key().to_owned())
+            .collect::<Vec<String>>()
+    }
+
+    /// 获取从 offset (即number) 处开始的所有区块。
+    pub fn get_blocks(&self, offset: u64) -> Result<Vec<Block>, ChainError> {
+        self.state.read().unwrap().get_blocks(offset)
+    }
+
+    /// 获取指定 number 的区块
+    pub fn get_block(&self, number: u64) -> Result<Block, ChainError> {
+        self.state.read().unwrap().get_block(number)
+    }
+
+    /// 获取所有人的余额
+    pub fn get_balances(&self) -> HashMap<String, u64> {
+        self.state.read().unwrap().get_balances()
+    }
+
+    /// 获取最新的区块 hash
+    pub fn latest_block_hash(&self) -> Hash {
+        self.state.read().unwrap().latest_block_hash()
+    }
+
+    /// 获取最新的区块 number
+    pub fn latest_block_number(&self) -> u64 {
+        self.state.read().unwrap().latest_block_number()
+    }
+
+    /// 获取下一个区块 number
+    pub fn next_block_number(&self) -> u64 {
+        self.state.read().unwrap().next_block_number()
+    }
+
+    fn add_pending_tx(&self, tx: SignedTx, peer_addr: &str) -> Result<(), ChainError> {
+        tx.check_signature()?;
+        info!("Added pending tx {:?} from peer {}", tx, peer_addr);
+        self.pending_txs.entry(tx.hash()).or_insert(tx);
+
+        Ok(())
+    }
+
+    fn remove_mined_txs(&self, block: &Block) {
+        for tx in &block.txs {
+            self.pending_txs.remove(&tx.hash());
+        }
+    }
+
+    fn remove_peer(&self, peer: &str) {
+        self.peers.remove(peer);
+    }
 }

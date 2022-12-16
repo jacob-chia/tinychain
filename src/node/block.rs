@@ -1,24 +1,25 @@
-use ethers_core::{types::H256, utils::hash_message};
-use serde::{Deserialize, Serialize};
 use std::mem;
 
+use serde::{Deserialize, Serialize};
+
 use super::SignedTx;
+use crate::{types::Hash, utils::hash_message};
 
 const BLOCK_REWORD: u64 = 100;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct BlockHeader {
-    pub(super) parent: H256,
-    pub(super) number: u64,
-    pub(super) nonce: u64,
-    pub(super) time: u64,
-    pub(super) miner: String,
+    pub parent: Hash,
+    pub number: u64,
+    pub nonce: u64,
+    pub time: u64,
+    pub miner: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Block {
-    pub(super) header: BlockHeader,
-    pub(super) txs: Vec<SignedTx>,
+    pub header: BlockHeader,
+    pub txs: Vec<SignedTx>,
 }
 
 impl<'a> Block {
@@ -30,9 +31,9 @@ impl<'a> Block {
         self.header.nonce = nonce;
     }
 
-    pub fn hash(&self) -> H256 {
+    pub fn hash(&self) -> Hash {
         let encoded = serde_json::to_string(self).unwrap();
-        hash_message(encoded)
+        hash_message(&encoded)
     }
 
     pub fn block_reward(&self) -> u64 {
@@ -43,7 +44,7 @@ impl<'a> Block {
 
 #[derive(Debug, Default)]
 pub struct BlockBuilder<'a> {
-    parent: H256,
+    parent: Hash,
     number: u64,
     nonce: u64,
     time: u64,
@@ -52,7 +53,7 @@ pub struct BlockBuilder<'a> {
 }
 
 impl<'a> BlockBuilder<'a> {
-    pub fn parent(mut self, parent: H256) -> Self {
+    pub fn parent(mut self, parent: Hash) -> Self {
         self.parent = parent;
         self
     }
@@ -98,15 +99,11 @@ impl<'a> BlockBuilder<'a> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlockKV {
-    pub(super) key: H256,
-    pub(super) value: Block,
+    pub key: Hash,
+    pub value: Block,
 }
 
 impl BlockKV {
-    // pub fn take_hash(&mut self) -> H256 {
-    //     mem::take(&mut self.key)
-    // }
-
     pub fn take_block(&mut self) -> Block {
         mem::take(&mut self.value)
     }
