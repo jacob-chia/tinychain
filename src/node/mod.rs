@@ -91,14 +91,10 @@ where
 
     /// 获取未生成区块的Tx，注意要按交易时间排序。
     pub fn get_pending_txs(&self) -> Vec<SignedTx> {
-        // 先克隆一份出来，尽早释放 self.pending_txs 中的锁。
-        // 这里执行 clone() 并不会有太大的开销，因为返回值 需要拿到 SignedTx 的所有权
-        // 即使这里不 clone()，在后面的 map 操作中也需要执行 clone()
-        let pending_txs = self.pending_txs.clone();
-
-        let mut txs = pending_txs
-            .into_iter()
-            .map(|(_, tx)| tx)
+        let mut txs = self
+            .pending_txs
+            .iter()
+            .map(|entry| entry.value().to_owned())
             .collect::<Vec<SignedTx>>();
 
         txs.sort_by(|tx1, tx2| tx1.time().cmp(&tx2.time()));
@@ -118,14 +114,9 @@ where
 
     /// 获取本节点知道的 peers。
     pub fn get_peers(&self) -> Vec<String> {
-        // 先克隆一份出来，尽早释放 self.peers 中的锁。
-        // 这里执行 clone() 并不会有太大的开销，因为返回值 需要拿到 peer_addr 的所有权
-        // 即使这里不 clone()，在后面的 map 操作中也需要执行 clone()
-        let peers = self.peers.clone();
-
-        peers
-            .into_iter()
-            .map(|(peer, _)| peer)
+        self.peers
+            .iter()
+            .map(|entry| entry.key().to_owned())
             .collect::<Vec<String>>()
     }
 

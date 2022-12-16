@@ -18,8 +18,7 @@ where
 
         loop {
             ticker.recv().unwrap();
-            // 遍历self.peers，在遍历过程中需要修改 self.peers (添加新发现的peers，删除通信出错的peers)
-            // 这种操作会引发死锁 （https://docs.rs/dashmap/latest/dashmap/struct.DashMap.html#method.remove）
+            // 遍历self.peers时会加“读锁”，在遍历过程中需要修改 self.peers，会尝试加“写锁”，此时会出现死锁
             // 所以先克隆一份，在 peers_clone 上遍历，在 self.peers 上修改，这样就不会死锁了。
             let peers = self.peers.clone();
 
