@@ -42,7 +42,7 @@ fn init_genesis_if_not_exists() -> Result<(), ChainError> {
     }
 
     fs::create_dir_all(database_dir)?;
-    fs::write(&genesis_path, GENESIS_DATA)?;
+    fs::write(genesis_path, GENESIS_DATA)?;
     File::create(BLOCKDB_PATH.get().unwrap())?;
     Ok(())
 }

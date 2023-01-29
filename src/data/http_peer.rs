@@ -34,7 +34,7 @@ impl DerefMut for HttpPeer {
 
 impl Peer for HttpPeer {
     fn ping(&self, my_addr: &str, peer_addr: &str) -> Result<(), ChainError> {
-        let url = format!("http://{}/peer/ping", peer_addr);
+        let url = format!("http://{peer_addr}/peer/ping");
 
         let mut body = HashMap::new();
         body.insert("addr", my_addr);
@@ -45,7 +45,7 @@ impl Peer for HttpPeer {
     }
 
     fn get_status(&self, peer_addr: &str) -> Result<crate::node::PeerStatus, ChainError> {
-        let url = format!("http://{}/peer/status", peer_addr);
+        let url = format!("http://{peer_addr}/peer/status");
         let resp = self.get(url).send()?.json()?;
 
         Ok(resp)
@@ -56,7 +56,7 @@ impl Peer for HttpPeer {
         peer_addr: &str,
         offset: u64,
     ) -> Result<Vec<crate::node::Block>, ChainError> {
-        let url = format!("http://{}/blocks", peer_addr);
+        let url = format!("http://{peer_addr}/blocks");
         let params = [("offset", offset.to_string())];
         let url = Url::parse_with_params(&url, &params).unwrap();
 

@@ -39,7 +39,7 @@ impl Tx {
 
     pub fn sign(self) -> Result<SignedTx, ChainError> {
         let sig = wallet::sign(&self.encode(), &self.from)?;
-        Ok(SignedTx { tx: self, sig: sig })
+        Ok(SignedTx { tx: self, sig })
     }
 }
 

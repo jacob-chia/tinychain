@@ -53,7 +53,7 @@ impl FileState {
 
         let mut state = Self {
             balances: genesis.clone_balances(),
-            mining_difficulty: mining_difficulty,
+            mining_difficulty,
             ..Default::default()
         };
 
