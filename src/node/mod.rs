@@ -53,13 +53,13 @@ where
         addr.parse::<SocketAddr>()?;
 
         let node = Self {
-            addr: addr,
-            miner: miner,
+            addr,
+            miner,
             peers: DashMap::new(),
             pending_txs: DashMap::new(),
             mining_difficulty: state.get_mining_difficulty(),
             state: Arc::new(RwLock::new(state)),
-            peer_proxy: peer_proxy,
+            peer_proxy,
         };
 
         if let Some(peer) = bootstrap_addr {
@@ -97,7 +97,7 @@ where
             .map(|entry| entry.value().to_owned())
             .collect::<Vec<SignedTx>>();
 
-        txs.sort_by(|tx1, tx2| tx1.time().cmp(&tx2.time()));
+        txs.sort_by_key(|tx| tx.time());
         txs
     }
 

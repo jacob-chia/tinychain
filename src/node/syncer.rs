@@ -40,7 +40,7 @@ where
         if self.addr == peer_addr {
             return Ok(());
         }
-        if connected.0 == false {
+        if !connected.0 {
             self.connect_to_peer(peer_addr)?;
         }
 
