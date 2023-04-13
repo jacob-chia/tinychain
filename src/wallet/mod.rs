@@ -26,7 +26,7 @@ pub fn new_account() -> Result<String, ChainError> {
 
 pub fn sign(msg: &str, account: &str) -> Result<String, ChainError> {
     let sig = get_wallet(account)?
-        .sign_hash(hash_message(msg))?
+        .sign_hash(hash_message(msg))
         .to_string();
 
     Ok(sig)

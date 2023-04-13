@@ -46,8 +46,6 @@ pub enum ChainError {
     DbError(#[from] std::io::Error),
     #[error("Failed to gossip with peer")]
     PeerError(#[from] reqwest::Error),
-    #[error("Failed to sign the hash message")]
-    WalletError(#[from] ethers_signers::WalletError),
 }
 
 // Tell axum how to convert `ChainError` into a response.
