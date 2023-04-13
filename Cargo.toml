@@ -6,17 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-thiserror = "1.0"  # Error Handling
-once_cell = "1.17" # Lazy Static
-clap = { version = "4.2", features = ["derive"] } # Command Line Argument Parser
-dashmap = "5.4"    # Concurrent Hashmap
+thiserror = "1.0"  # 错误处理
+once_cell = "1.15" # Lazy static
+clap = { version = "4.0", features = ["derive"] } # 命令行解析
+ethers-core = "0.17"    # 账户管理、签名、验签
+ethers-signers = "0.17" # 账户管理、签名、验签
+log = "0.4"         # 日志
+env_logger = "0.9"  # 日志
+serde = { version = "1.0", features = ["derive"] } # 序列化/反序列化
+serde_json = "1.0"  # 序列化/反序列化
+dashmap = "5.4"     # 并发安全的 HashMap
 reqwest = { version = "0.11", features = ["blocking", "json"] } # HTTP Client
-axum = "0.6"        # HTTP Server
-tokio = { version = "1.21", features = ["full"] } # Async Runtime
-crossbeam-channel = "0.5" # A Better Channel
-ethers-core = "2.0"       # Wallet
-ethers-signers = "2.0"    # Wallet
-log = "0.4"               # Logging
-env_logger = "0.10"       # Logging
-serde = { version = "1.0", features = ["derive"] } # Serializing/Deserializing
-serde_json = "1.0" # Serializing/Deserializing
+axum = "0.5"        # HTTP Server
+tokio = { version = "1.21", features = ["full"] } # 异步运行时
+crossbeam-channel = "0.5" # 更好的channel
