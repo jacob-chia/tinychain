@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Extension, Path, Query},
-    handler::Handler,
+    extract::{Path, Query, State as AxumState},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -29,8 +28,8 @@ where
         .route("/transfer", post(transfer::<S, P>))
         .route("/peer/ping", post(ping_peer::<S, P>))
         .route("/peer/status", get(get_peer_status::<S, P>))
-        .fallback(not_found.into_service())
-        .layer(Extension(node))
+        .fallback(not_found)
+        .with_state(node)
 }
 
 #[derive(Debug, Deserialize)]
@@ -40,7 +39,7 @@ struct GetBlocksReq {
 
 async fn get_blocks<S, P>(
     Query(params): Query<GetBlocksReq>,
-    Extension(node): Extension<Arc<Node<S, P>>>,
+    AxumState(node): AxumState<Arc<Node<S, P>>>,
 ) -> Result<impl IntoResponse, ChainError>
 where
     S: State + Send + Sync + 'static,
@@ -52,7 +51,7 @@ where
 
 async fn get_block<S, P>(
     Path(number): Path<u64>,
-    Extension(node): Extension<Arc<Node<S, P>>>,
+    AxumState(node): AxumState<Arc<Node<S, P>>>,
 ) -> Result<impl IntoResponse, ChainError>
 where
     S: State + Send + Sync + 'static,
@@ -62,7 +61,7 @@ where
     Ok(Json(block))
 }
 
-async fn get_balances<S, P>(Extension(node): Extension<Arc<Node<S, P>>>) -> impl IntoResponse
+async fn get_balances<S, P>(AxumState(node): AxumState<Arc<Node<S, P>>>) -> impl IntoResponse
 where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
@@ -80,7 +79,7 @@ struct NonceReq {
 
 async fn next_account_nonce<S, P>(
     Query(params): Query<NonceReq>,
-    Extension(node): Extension<Arc<Node<S, P>>>,
+    AxumState(node): AxumState<Arc<Node<S, P>>>,
 ) -> impl IntoResponse
 where
     S: State + Send + Sync + 'static,
@@ -98,8 +97,8 @@ struct TxReq {
 }
 
 async fn transfer<S, P>(
+    AxumState(node): AxumState<Arc<Node<S, P>>>,
     Json(tx): Json<TxReq>,
-    Extension(node): Extension<Arc<Node<S, P>>>,
 ) -> Result<impl IntoResponse, ChainError>
 where
     S: State + Send + Sync + 'static,
@@ -116,8 +115,8 @@ struct PingPeerReq {
 }
 
 async fn ping_peer<S, P>(
+    AxumState(node): AxumState<Arc<Node<S, P>>>,
     Json(peer): Json<PingPeerReq>,
-    Extension(node): Extension<Arc<Node<S, P>>>,
 ) -> Result<impl IntoResponse, ChainError>
 where
     S: State + Send + Sync + 'static,
@@ -128,7 +127,7 @@ where
     Ok(Json(json!({"success": true})))
 }
 
-async fn get_peer_status<S, P>(Extension(node): Extension<Arc<Node<S, P>>>) -> impl IntoResponse
+async fn get_peer_status<S, P>(AxumState(node): AxumState<Arc<Node<S, P>>>) -> impl IntoResponse
 where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
