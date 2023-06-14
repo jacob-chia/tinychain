@@ -13,6 +13,8 @@ Cargo.lock
 # Added by cargo
 
 /target
+
+# Dev directories/files
 /db/database
 /db1
 /db2

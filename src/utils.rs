@@ -1,6 +1,7 @@
 use std::time::SystemTime;
 
-use ethers_core::rand::{thread_rng, Rng};
+use rand::{thread_rng, Rng};
+use tiny_keccak::{Hasher, Keccak};
 
 use crate::types::Hash;
 
@@ -12,7 +13,13 @@ pub fn unix_timestamp() -> u64 {
 }
 
 pub fn hash_message(msg: &str) -> Hash {
-    ethers_core::utils::hash_message(msg)
+    let mut output = [0u8; 32];
+
+    let mut hasher = Keccak::v256();
+    hasher.update(msg.as_bytes());
+    hasher.finalize(&mut output);
+
+    output.into()
 }
 
 pub fn gen_random_number() -> u64 {

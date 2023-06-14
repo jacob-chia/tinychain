@@ -1,0 +1,24 @@
+## The path to the data directory.
+datadir = "./db2/"
+## The address to listen on for HTTP Server.
+http_addr = "127.0.0.1:8002"
+## The miner address to receive mining rewards.
+miner = "16d5e01e-709a-4536-a4f2-9f069070c51a"
+
+[p2p]
+## The address to listen on for P2P node.
+addr = "/ip4/0.0.0.0/tcp/9002"
+## Secret to generate node keypair. If not set, a random secret will be generated.
+secret = "AEFv5UZgJmzoqm8xd8qhKpinqnHmSkGDDfwr4DmP5eYC"
+## Boot node address. If not set, the node will start as a boot node.
+boot_node = "/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc"
+
+[p2p.req_resp]
+## Connection keep-alive time in seconds.
+connection_keep_alive = 10
+## Request timeout in seconds.
+request_timeout = 10
+## Maximum request size in bytes (1MB).
+max_request_size = 1048576
+## Maximum response size in bytes (1MB).
+max_response_size = 1048576

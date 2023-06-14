@@ -1,18 +1,22 @@
-use serde::Deserialize;
+use crate::error::Error;
 
 use super::{Block, SignedTx};
-use crate::{error::ChainError, types::Hash};
 
-#[derive(Debug, Deserialize)]
-pub struct PeerStatus {
-    pub hash: Hash,
-    pub number: u64,
-    pub peers: Vec<String>,
-    pub pending_txs: Vec<SignedTx>,
-}
-
+/// Peer is a trait that defines the interface for a peer.
 pub trait Peer {
-    fn ping(&self, my_addr: &str, peer_addr: &str) -> Result<(), ChainError>;
-    fn get_status(&self, peer_addr: &str) -> Result<PeerStatus, ChainError>;
-    fn get_blocks(&self, peer_addr: &str, offset: u64) -> Result<Vec<Block>, ChainError>;
+    /// Return the peers (base58 encoded peer ids) that this node knows about.
+    fn known_peers(&self) -> Vec<String>;
+
+    /// Get the best block number from a peer.
+    /// Ok(None) indicates that there is no block yet in the peer.
+    fn get_best_number(&self, peer_id: &str) -> Result<Option<u64>, Error>;
+
+    /// Get the blocks from a peer.
+    fn get_blocks(&self, peer_id: &str, from_number: u64) -> Result<Vec<Block>, Error>;
+
+    /// Broadcast a transaction to the network.
+    fn broadcast_tx(&self, tx: SignedTx);
+
+    /// Broadcast a block to the network.
+    fn broadcast_block(&self, block: Block);
 }
