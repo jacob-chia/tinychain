@@ -1,11 +1,13 @@
+use std::ops::Deref;
+
 use serde::{Deserialize, Serialize};
 
-use crate::{error::ChainError, types::Hash, utils, wallet};
+use crate::{error::Error, types::Hash, utils, wallet};
 
 const GAS: u64 = 21;
 const GAS_PRICE: u64 = 1;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct Tx {
     pub from: String,
     pub to: String,
@@ -13,7 +15,7 @@ pub struct Tx {
     pub nonce: u64,
     pub gas: u64,
     pub gas_price: u64,
-    pub time: u64,
+    pub timestamp: u64,
 }
 
 impl Tx {
@@ -37,13 +39,13 @@ impl Tx {
         utils::hash_message(&self.encode())
     }
 
-    pub fn sign(self) -> Result<SignedTx, ChainError> {
+    pub fn sign(self) -> Result<SignedTx, Error> {
         let sig = wallet::sign(&self.encode(), &self.from)?;
         Ok(SignedTx { tx: self, sig })
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct TxBuilder {
     pub from: String,
     pub to: String,
@@ -80,32 +82,29 @@ impl TxBuilder {
             nonce: self.nonce,
             gas: GAS,
             gas_price: GAS_PRICE,
-            time: utils::unix_timestamp(),
+            timestamp: utils::unix_timestamp(),
         }
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct SignedTx {
     pub tx: Tx,
     pub sig: String,
 }
 
+impl Deref for SignedTx {
+    type Target = Tx;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tx
+    }
+}
+
 impl SignedTx {
-    pub fn check_signature(&self) -> Result<(), ChainError> {
+    pub fn check_signature(&self) -> Result<(), Error> {
         wallet::verify(&self.tx.encode(), &self.sig, &self.tx.from)
-    }
-
-    pub fn gas_cost(&self) -> u64 {
-        self.tx.gas_cost()
-    }
-
-    pub fn hash(&self) -> Hash {
-        self.tx.hash()
-    }
-
-    pub fn time(&self) -> u64 {
-        self.tx.time
+            .map_err(|_| Error::InvalidTxSignature(self.from.clone()))
     }
 }
 

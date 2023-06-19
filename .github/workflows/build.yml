@@ -37,6 +37,10 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
+        with:
+          version: "23.x"
       - name: Check code format
         run: cargo fmt -- --check
       - name: Check the package for errors

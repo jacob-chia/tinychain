@@ -2,13 +2,14 @@ use std::{
     collections::HashMap,
     fs::OpenOptions,
     io::{BufRead, BufReader, Write},
+    path::{Path, PathBuf},
 };
 
-use log::info;
+use log::{info, warn};
 use once_cell::sync::OnceCell;
 
 use crate::{
-    error::ChainError,
+    error::Error,
     node::{Block, BlockKV, SignedTx, State},
     types::Hash,
     utils,
@@ -18,18 +19,16 @@ mod genesis;
 
 pub use genesis::*;
 
-static DATABASE_DIR: OnceCell<String> = OnceCell::new();
-static GENESIS_PATH: OnceCell<String> = OnceCell::new();
-static BLOCKDB_PATH: OnceCell<String> = OnceCell::new();
+static DATABASE_DIR: OnceCell<PathBuf> = OnceCell::new();
+static GENESIS_PATH: OnceCell<PathBuf> = OnceCell::new();
+static BLOCKDB_PATH: OnceCell<PathBuf> = OnceCell::new();
 
-pub fn init_database_dir(datadir: &str) {
-    let mut dir = datadir.to_owned();
-    dir.push_str("database/");
+pub fn init_database_dir(datadir: impl AsRef<Path>) {
+    let mut dir = datadir.as_ref().to_path_buf();
+    dir.push("database");
 
-    let mut genesis_path = dir.clone();
-    let mut blockdb_path = genesis_path.clone();
-    genesis_path.push_str("genesis.json");
-    blockdb_path.push_str("block.db");
+    let genesis_path = dir.join("genesis.json");
+    let blockdb_path = dir.join("block.db");
 
     DATABASE_DIR.get_or_init(|| dir);
     GENESIS_PATH.get_or_init(|| genesis_path);
@@ -40,16 +39,15 @@ pub fn init_database_dir(datadir: &str) {
 pub struct FileState {
     balances: HashMap<String, u64>,
     account2nonce: HashMap<String, u64>,
-    latest_block: Block,
-    latest_block_hash: Hash,
+    latest_block: Option<Block>,
+    latest_block_hash: Option<Hash>,
     mining_difficulty: usize,
-    has_blocks: bool,
 }
 
 impl FileState {
-    pub fn new(mining_difficulty: usize) -> Result<Self, ChainError> {
+    pub fn new(mining_difficulty: usize) -> Result<Self, Error> {
         let genesis = Genesis::load()?;
-        info!("Genesis loaded, token symbol: {}", genesis.symbol);
+        info!("📣 Genesis loaded, token symbol: {}", genesis.symbol);
 
         let mut state = Self {
             balances: genesis.clone_balances(),
@@ -61,7 +59,7 @@ impl FileState {
         Ok(state)
     }
 
-    fn load_db(&mut self) -> Result<(), ChainError> {
+    fn load_db(&mut self) -> Result<(), Error> {
         let db_path = BLOCKDB_PATH.get().unwrap();
         let db = OpenOptions::new().read(true).open(db_path)?;
         let lines = BufReader::new(db).lines();
@@ -72,17 +70,17 @@ impl FileState {
                 let block = block_kv.take_block();
                 self.apply_block(block)?;
             } else {
-                info!("load_db error: {:?}", line);
+                warn!("❗ load_db error: {:?}", line);
             }
         }
 
         Ok(())
     }
 
-    fn persist(&mut self) -> Result<(), ChainError> {
+    fn persist(&mut self) -> Result<(), Error> {
         let mut block_json = serde_json::to_string(&BlockKV {
-            key: self.latest_block_hash,
-            value: self.latest_block.clone(),
+            key: self.latest_block_hash.unwrap_or_default(),
+            value: self.latest_block.clone().unwrap_or_default(),
         })?;
         block_json.push('\n');
 
@@ -95,43 +93,44 @@ impl FileState {
         Ok(())
     }
 
-    fn apply_block(&mut self, block: Block) -> Result<(), ChainError> {
+    fn apply_block(&mut self, block: Block) -> Result<(), Error> {
         self.check_block(&block)?;
         self.apply_txs(&block.txs)?;
 
         *self
             .balances
-            .entry(block.header.miner.to_owned())
+            .entry(block.header.author.to_owned())
             .or_default() += block.block_reward();
 
-        self.latest_block_hash = block.hash();
-        self.latest_block = block;
-        self.has_blocks = true;
+        self.latest_block_hash = Some(block.hash());
+        self.latest_block = Some(block);
 
         Ok(())
     }
 
-    fn check_block(&self, block: &Block) -> Result<(), ChainError> {
+    fn check_block(&self, block: &Block) -> Result<(), Error> {
         // check number
-        let expected_number = self.latest_block.header.number + 1;
-        if self.has_blocks && expected_number != block.header.number {
-            return Err(ChainError::InvalidBlockNumber(
+        let expected_number = self.next_block_number();
+        if expected_number != block.header.number {
+            return Err(Error::InvalidBlockNumber(
                 expected_number,
                 block.header.number,
             ));
         }
 
         // check header
-        if self.has_blocks && self.latest_block_hash != block.header.parent {
-            return Err(ChainError::InvalidBlockParent(
-                self.latest_block_hash,
-                block.header.parent,
-            ));
+        if let Some(latest_hash) = self.latest_block_hash {
+            if block.header.parent_hash != latest_hash {
+                return Err(Error::InvalidBlockParent(
+                    latest_hash,
+                    block.header.parent_hash,
+                ));
+            }
         }
 
         // check hash
         if !self.is_valid_hash(&block.hash()) {
-            return Err(ChainError::InvalidBlockHash(
+            return Err(Error::InvalidBlockHash(
                 block.hash(),
                 self.mining_difficulty,
             ));
@@ -144,11 +143,10 @@ impl FileState {
         utils::is_valid_hash(hash, self.mining_difficulty)
     }
 
-    fn apply_txs(&mut self, signed_txs: &[SignedTx]) -> Result<(), ChainError> {
-        for signed_tx in signed_txs {
-            self.check_tx(signed_tx)?;
+    fn apply_txs(&mut self, signed_txs: &[SignedTx]) -> Result<(), Error> {
+        for tx in signed_txs {
+            self.check_tx(tx)?;
 
-            let tx = &signed_tx.tx;
             *self.balances.get_mut(&tx.from).unwrap() -= tx.cost();
             *self.balances.entry(tx.to.to_owned()).or_default() += tx.value;
             *self.account2nonce.entry(tx.from.to_owned()).or_default() = tx.nonce;
@@ -157,21 +155,27 @@ impl FileState {
         Ok(())
     }
 
-    fn check_tx(&self, signed_tx: &SignedTx) -> Result<(), ChainError> {
-        signed_tx.check_signature()?;
-
-        let tx = &signed_tx.tx;
+    fn check_tx(&self, tx: &SignedTx) -> Result<(), Error> {
+        tx.check_signature()?;
 
         // check account nonce
         let expected_nonce = self.next_account_nonce(&tx.from);
         if expected_nonce != tx.nonce {
-            return Err(ChainError::InvalidTxNonce(expected_nonce, tx.nonce));
+            return Err(Error::InvalidTxNonce(
+                tx.from.clone(),
+                expected_nonce,
+                tx.nonce,
+            ));
         }
 
         // check balance
         let balance = *self.balances.get(&tx.from).unwrap_or(&0);
         if balance < tx.cost() {
-            return Err(ChainError::InsufficientBalance(tx.cost(), balance));
+            return Err(Error::InsufficientBalance(
+                tx.from.clone(),
+                tx.cost(),
+                balance,
+            ));
         }
 
         Ok(())
@@ -184,50 +188,44 @@ impl State for FileState {
     }
 
     fn next_block_number(&self) -> u64 {
-        if self.has_blocks {
-            return self.latest_block.header.number + 1;
-        }
-
-        0
+        self.latest_block_number()
+            .map(|number| number + 1)
+            .unwrap_or_default()
     }
 
     fn next_account_nonce(&self, account: &str) -> u64 {
         *self.account2nonce.get(account).unwrap_or(&0) + 1
     }
 
-    fn latest_block(&self) -> Block {
+    fn latest_block(&self) -> Option<Block> {
         self.latest_block.clone()
     }
 
-    fn latest_block_hash(&self) -> Hash {
+    fn latest_block_hash(&self) -> Option<Hash> {
         self.latest_block_hash
     }
 
-    fn latest_block_number(&self) -> u64 {
-        if self.has_blocks {
-            return self.latest_block.header.number;
-        }
-
-        0
+    fn latest_block_number(&self) -> Option<u64> {
+        self.latest_block.as_ref().map(|block| block.header.number)
     }
 
-    fn add_block(&mut self, block: Block) -> Result<Hash, ChainError> {
-        // 修改state前先克隆一份，防止出错时无法回滚state。
+    fn add_block(&mut self, block: Block) -> Result<Hash, Error> {
+        // Apply the block to the cloned state to avoid mutating the original state if the block is invalid.
         let mut state = self.clone();
         state.apply_block(block)?;
         state.persist()?;
         *self = state;
 
-        Ok(self.latest_block_hash)
+        Ok(self.latest_block_hash.unwrap())
     }
 
-    fn get_blocks(&self, offset: u64) -> Result<Vec<Block>, ChainError> {
+    fn get_blocks(&self, from_number: u64) -> Result<Vec<Block>, Error> {
         let db_path = BLOCKDB_PATH.get().unwrap();
         let db = OpenOptions::new().read(true).open(db_path)?;
 
         Ok(BufReader::new(db)
             .lines()
-            .skip(offset as usize)
+            .skip(from_number as usize)
             .map(|line| {
                 serde_json::from_str::<BlockKV>(&line.unwrap())
                     .unwrap()
@@ -236,7 +234,7 @@ impl State for FileState {
             .collect::<Vec<_>>())
     }
 
-    fn get_block(&self, number: u64) -> Result<Block, ChainError> {
+    fn get_block(&self, number: u64) -> Result<Block, Error> {
         let db_path = BLOCKDB_PATH.get().unwrap();
         let db = OpenOptions::new().read(true).open(db_path)?;
 
@@ -248,7 +246,7 @@ impl State for FileState {
                     .unwrap()
                     .take_block()
             })
-            .ok_or(ChainError::BlockNotFound(number))
+            .ok_or(Error::BlockNotFound(number))
     }
 
     fn get_mining_difficulty(&self) -> usize {
@@ -258,18 +256,31 @@ impl State for FileState {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
 
     #[test]
     fn test_database_dir_can_only_be_initialized_once() {
-        init_database_dir("/tmp/");
-        assert_eq!("/tmp/database/", DATABASE_DIR.get().unwrap());
-        assert_eq!("/tmp/database/genesis.json", GENESIS_PATH.get().unwrap());
-        assert_eq!("/tmp/database/block.db", BLOCKDB_PATH.get().unwrap());
+        let tmpdir = tempdir_with_prefix("tmp");
+        let _ = fs::remove_dir_all(&tmpdir);
+
+        init_database_dir(&tmpdir);
+        let expected_db_dir = tmpdir.join("database");
+        let expected_genesis = expected_db_dir.join("genesis.json");
+        let expected_block_file = expected_db_dir.join("block.db");
 
         init_database_dir("/another/dir/");
-        assert_eq!("/tmp/database/", DATABASE_DIR.get().unwrap());
-        assert_eq!("/tmp/database/genesis.json", GENESIS_PATH.get().unwrap());
-        assert_eq!("/tmp/database/block.db", BLOCKDB_PATH.get().unwrap());
+        assert_eq!(&expected_db_dir, DATABASE_DIR.get().unwrap());
+        assert_eq!(&expected_genesis, GENESIS_PATH.get().unwrap());
+        assert_eq!(&expected_block_file, BLOCKDB_PATH.get().unwrap());
+    }
+
+    fn tempdir_with_prefix(prefix: &str) -> PathBuf {
+        tempfile::Builder::new()
+            .prefix(prefix)
+            .tempdir()
+            .unwrap()
+            .into_path()
     }
 }

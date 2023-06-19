@@ -1,22 +1,53 @@
+[workspace]
+
+members = ["wallet", "tinyp2p"]
+
+[workspace.dependencies]
+thiserror = "1.0"
+once_cell = "1.18"
+log = "0.4"
+pretty_env_logger = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.28", features = ["full"] }
+tokio-stream = "0.1"
+toml = "0.7"
+tempfile = "3.6"
+
 [package]
+
 name = "tinychain"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-thiserror = "1.0"  # 错误处理
-once_cell = "1.15" # Lazy static
-clap = { version = "4.0", features = ["derive"] } # 命令行解析
-ethers-core = "0.17"    # 账户管理、签名、验签
-ethers-signers = "0.17" # 账户管理、签名、验签
-log = "0.4"         # 日志
-env_logger = "0.9"  # 日志
-serde = { version = "1.0", features = ["derive"] } # 序列化/反序列化
-serde_json = "1.0"  # 序列化/反序列化
-dashmap = "5.4"     # 并发安全的 HashMap
-reqwest = { version = "0.11", features = ["blocking", "json"] } # HTTP Client
-axum = "0.5"        # HTTP Server
-tokio = { version = "1.21", features = ["full"] } # 异步运行时
-crossbeam-channel = "0.5" # 更好的channel
+wallet = { path = "wallet" }
+tinyp2p = { path = "tinyp2p" }
+
+thiserror.workspace = true
+once_cell.workspace = true
+log.workspace = true
+pretty_env_logger.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+toml.workspace = true
+
+clap = { version = "4.3", features = ["derive"] }
+dashmap = "5.4"
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+axum = { version = "0.6", features = ["default", "macros"] }
+crossbeam-channel = "0.5"
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
+rand = "0.8"
+prost = "0.11"
+hex = "0.4"
+
+[build-dependencies]
+prost-build = "0.11"
+
+[dev-dependencies]
+tempfile.workspace = true
+project-root = "0.2"

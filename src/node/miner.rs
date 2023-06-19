@@ -1,96 +1,102 @@
+//! Periodically mine blocks.
+//!
+//! Cancel mining if received a block from other peers when mining.
+
 use std::time::{self, Duration};
 
 use crossbeam_channel::{select, tick, Receiver};
-use log::error;
+use log::info;
 
 use super::*;
 use crate::utils;
 
-const MINE_INTERVAL: u64 = 10;
+const MINE_INTERVAL: u64 = 11;
 
 impl<S, P> Node<S, P>
 where
     S: State + Send + Sync + 'static,
     P: Peer + Send + Sync + 'static,
 {
-    pub fn mine(&self, block_receiver: Receiver<Block>) {
-        info!("Miner is running");
+    pub fn mine(&self, cancel_signal_r: Receiver<()>) {
         let ticker = tick(Duration::from_secs(MINE_INTERVAL));
 
         loop {
             select! {
+                // It's time to mine a new block.
                 recv(ticker) -> _ => {
-                    ticker.recv().unwrap();
                     if self.pending_txs.is_empty() {
                         continue;
                     }
 
                     let block = Block::builder()
-                        .parent(self.latest_block_hash())
-                        .number(self.next_block_number())
-                        .time(utils::unix_timestamp())
-                        .nonce(utils::gen_random_number())
-                        .miner(&self.miner)
-                        .txs(self.get_pending_txs())
-                        .build();
+                    .parent(self.latest_block_hash().unwrap_or_default())
+                    .number(self.next_block_number())
+                    .time(utils::unix_timestamp())
+                    .nonce(utils::gen_random_number())
+                    .miner(&self.miner)
+                    .txs(self.get_pending_txs())
+                    .build();
 
-                    if let Some(block) = self.pow(block, block_receiver.clone()) {
-                        self.add_block(block);
+                    if let Some(block) = self.pow(block, cancel_signal_r.clone()) {
+                        if self.add_block(block.clone()) {
+                            self.peer_proxy.broadcast_block(block)
+                        }
                     }
                 },
-                // 收到来自其他节点的区块，此时尚未开始挖矿
-                recv(block_receiver) -> block => {
-                    if let Ok(block) = block {
-                        info!("Received a block ({}) from another peer.", block.hash());
-                        self.add_block(block);
-                    }
+                // Miner is not mining right now, ignore the cancel signal.
+                recv(cancel_signal_r) -> _ => {
+                    continue;
                 }
             }
         }
     }
 
-    fn pow(&self, mut block: Block, block_receiver: Receiver<Block>) -> Option<Block> {
+    fn get_pending_txs(&self) -> Vec<SignedTx> {
+        let mut txs = self
+            .pending_txs
+            .iter()
+            .map(|entry| entry.value().to_owned())
+            .collect::<Vec<SignedTx>>();
+
+        txs.sort_by_key(|tx| tx.timestamp);
+        txs
+    }
+
+    fn pow(&self, mut block: Block, cancel_signal_r: Receiver<()>) -> Option<Block> {
         let mining_difficulty = self.mining_difficulty;
-        // 尝试次数
         let mut attempt = 0;
         let timer = time::Instant::now();
 
         while !utils::is_valid_hash(&block.hash(), mining_difficulty) {
-            // 每次新的尝试之前，先检查有没有同步到来自其他peers的区块
-            // 若收到新的区块，取消本次挖矿
-            if let Ok(block) = block_receiver.try_recv() {
-                info!(
-                    "Mining cancelled. Received a block ({}) from another peer.",
-                    block.hash()
-                );
-                self.add_block(block);
+            // Every time before a new attempt, check if there are any blocks from other peers,
+            // if so, cancel this mining.
+            if let Ok(_) = cancel_signal_r.try_recv() {
+                info!("📣 Received block from other peers, cancel mining.");
                 return None;
             }
 
-            if attempt % 1000000 == 0 {
-                info!("Mining attempt: {attempt}, elapsed: {:?}", timer.elapsed());
+            if attempt % 10000 == 0 {
+                let elapsed = timer.elapsed();
+                info!("📣 Mining attempt: {}, elapsed: {:?}", attempt, elapsed);
+
+                // To demonstrate that different miners have different mining power,
+                // we mock a heavy work that takes random seconds.
+                std::thread::sleep(Duration::from_secs(block.header.nonce % 10));
             }
             attempt += 1;
-            block.update_nonce(utils::gen_random_number());
+            block.update_nonce_and_time();
         }
 
-        info!("Mined new Block '{}' 🎉🎉🎉:", block.hash());
-        info!("\tHeight: '{}'", block.header.number);
-        info!("\tNonce: '{}'", block.header.nonce);
-        info!("\tCreated: '{}'", block.header.time);
-        info!("\tMiner: '{}'", block.header.miner);
-        info!("\tParent: '{}'", block.header.parent);
-        info!("\tAttempt: '{}'", attempt);
-        info!("\tTime: {:?}", timer.elapsed());
+        info!("📣 Mined new Block '{}' 🎉🎉🎉:", block.hash());
+        info!("📣 \tHeight: '{}'", block.header.number);
+        info!("📣 \tNonce: '{}'", block.header.nonce);
+        info!("📣 \tCreated: '{}'", block.header.timestamp);
+        info!("📣 \tMiner: '{}'", block.header.author);
+        info!("📣 \tParent: '{}'", block.header.parent_hash);
+        info!("📣 \tAttempt: '{}'", attempt);
+        info!("📣 \tTime: {:?}", timer.elapsed());
         info!("🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉\n");
 
         Some(block)
-    }
-
-    fn add_block(&self, block: Block) {
-        if let Err(err) = self.state.write().unwrap().add_block(block.clone()) {
-            error!("Failed to add block: {}", err);
-        }
-        self.remove_mined_txs(&block);
     }
 }

@@ -1,18 +1,20 @@
 ## 1 异步
 
 相关依赖
- - [tokio](https://docs.rs/crate/tokio/latest): 异步运行时
- - [axum](https://docs.rs/crate/axum/latest): HTTP Server
+
+- [tokio](https://docs.rs/crate/tokio/latest): 异步运行时
+- [axum](https://docs.rs/crate/axum/latest): HTTP Server
 
 ### 1.1 最少必要知识
 
 - 知道 `#[tokio::main]` 和 `async/await` 就可以写异步代码。
 
 初学者可以暂时跳过所有讲异步底层原理的内容，知道 `何时用` 和 `怎么用` 即可。
- - 何时用：最典型的场景是`并发处理网络I/O` (拓展阅读：什么时候不适合异步？`https://tokio.rs/tokio/tutorial#when-not-to-use-tokio`)
- - 如何用：Tokio教程建议反复阅读（`https://tokio.rs/tokio/tutorial`）
 
-### 1.2 如何只让HTTP Server用异步运行时？
+- 何时用：最典型的场景是`并发处理网络I/O` (拓展阅读：什么时候不适合异步？`https://tokio.rs/tokio/tutorial#when-not-to-use-tokio`)
+- 如何用：Tokio 教程建议反复阅读（`https://tokio.rs/tokio/tutorial`）
+
+### 1.2 如何只让 HTTP Server 用异步运行时？
 
 ```rs
 // main.rs
@@ -56,7 +58,8 @@ where
 ## 2 错误处理
 
 相关依赖
- - [thiserror](https://docs.rs/crate/thiserror/latest)
+
+- [thiserror](https://docs.rs/crate/thiserror/latest)
 
 ### 错误类型转换
 
@@ -82,7 +85,7 @@ fn get_wallet(account: &str) -> Result<LocalWallet, ChainError> {
 }
 ```
 
-### 不同的错误返回不同的HTTP Status
+### 不同的错误返回不同的 HTTP Status
 
 ```rs
 // error.rs
@@ -105,8 +108,9 @@ impl IntoResponse for ChainError {
 ## 3 Node
 
 相关依赖
- - [dashmap](https://docs.rs/crate/dashmap/latest): 并发安全的HashMap
- - [crossbeam-channel](https://docs.rs/crate/crossbeam-channel/latest): 比 std 更好用的 channel
+
+- [dashmap](https://docs.rs/crate/dashmap/latest): 并发安全的 HashMap
+- [crossbeam-channel](https://docs.rs/crate/crossbeam-channel/latest): 比 std 更好用的 channel
 
 ### 关键代码导读
 
@@ -115,8 +119,8 @@ impl IntoResponse for ChainError {
 
 ### Rust 可以安全地使用锁吗？
 
-- 不会`忘记加锁`：Rust中`Mutex<T>`将`T`封装为新类型，不能越过Mutex直接使用T；
-- 不会`忘记释放锁`：Rust的所有权系统使得 Mutex<T> 在`离开作用域时`自动释放锁；
+- 不会`忘记加锁`：Rust 中`Mutex<T>`将`T`封装为新类型，不能越过 Mutex 直接使用 T；
+- 不会`忘记释放锁`：Rust 的所有权系统使得 Mutex<T> 在`离开作用域时`自动释放锁；
   - 如何尽早释放锁：在用完锁之后，尽快让该变量离开作用域，别等函数执行完（详见下方例子）
 - 可能出现`死锁`：比如一个操作需要锁住两个资源，而两个线程分别持有其中一个锁；
 
@@ -168,13 +172,15 @@ for (peer_addr, connected) in self.peers.write().unwrap() {
 ```
 
 上述代码不会出现死锁，但这么做有什么问题？
-  - `写`锁是独占锁，在执行 for 循环的过程中一直持有该锁，导致其他线程在此期间无法读取 self.peers 的数据
-  - 所以，即使不用 dashmap，也要先 clone 一份，尽早把`读锁`释放掉，然后再需要写操作的时候再加`写锁`。
+
+- `写`锁是独占锁，在执行 for 循环的过程中一直持有该锁，导致其他线程在此期间无法读取 self.peers 的数据
+- 所以，即使不用 dashmap，也要先 clone 一份，尽早把`读锁`释放掉，然后再需要写操作的时候再加`写锁`。
 
 ## 4 HTTP Peer
 
 相关依赖
- - [reqwest](https://docs.rs/crate/reqwest/latest): HTTP Client
+
+- [reqwest](https://docs.rs/crate/reqwest/latest): HTTP Client
 
 ### Deref/DerefMut
 
@@ -201,7 +207,6 @@ impl DerefMut for HttpPeer {
 ```
 
 若没有 `Deref/DerefMut`，HttpPeer 不得不把所有 reqwest 的接口实现一遍，内部做一个转发。
-
 
 ## 5 演示
 
@@ -241,7 +246,7 @@ RUST_LOG=info ./target/debug/tinychain run -a "127.0.0.1:8002" -m "346b4cd8-10b6
 # 所有人的账户余额
 curl http://localhost:8000/balances | jq
 # 区块信息
-curl http://localhost:8000/blocks?offset=0 | jq
+curl http://localhost:8000/blocks?from_number=0 | jq
 ```
 
 ![](img/tiny-chain-genesis-state.png)
@@ -263,20 +268,22 @@ curl -X POST http://localhost:8002/transfer \
   -d '{"from": "2bde5a91-6411-46ba-9173-c3e075d32100", "to": "16d5e01e-709a-4536-a4f2-9f069070c51a", "value": 5000, "nonce": 2}'
 ```
 
-4. Emma 节点生成了1个区块
+4. Emma 节点生成了 1 个区块
 
 ![](img/tiny-chain-emma-mined-1-block.png)
 
-5. 另外两个节点显式同步了1个区块
+5. 另外两个节点显式同步了 1 个区块
 
 ![](img/tiny-chain-sync-block.png)
 
 6. 查询所有人的余额
- - curl http://localhost:8000/balances | jq
+
+- curl http://localhost:8000/balances | jq
 
 ![](img/tiny-chain-balances.png)
 
 7. 查询区块信息
- - curl http://localhost:8000/blocks?offset=0 | jq
+
+- curl http://localhost:8000/blocks?from_number=0 | jq
 
 ![](img/tiny-chain-blocks.png)
