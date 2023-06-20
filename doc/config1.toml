@@ -1,9 +1,15 @@
 ## The path to the data directory.
-datadir = "./db1/"
+data_dir = "./db1/database/"
+## The path to the genesis file.
+genesis_file = "./genesis.json"
 ## The address to listen on for HTTP Server.
 http_addr = "127.0.0.1:8001"
-## The miner address to receive mining rewards.
-miner = "3d211869-2505-4394-bd99-0c76eb761bf9"
+## The author account to receive mining rewards.
+author = "0x9f366a0f10393629c60f48489209fb2361b7543e"
+
+[wallet]
+## The path to the keystores directory.
+keystore_dir = "./db1/keystore/"
 
 [p2p]
 ## The address to listen on for P2P node.

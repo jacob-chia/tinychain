@@ -7,11 +7,10 @@ pub trait Peer {
     /// Return the peers (base58 encoded peer ids) that this node knows about.
     fn known_peers(&self) -> Vec<String>;
 
-    /// Get the best block number from a peer.
-    /// Ok(None) indicates that there is no block yet in the peer.
-    fn get_best_number(&self, peer_id: &str) -> Result<Option<u64>, Error>;
+    /// Get the block height from a peer.
+    fn get_block_height(&self, peer_id: &str) -> Result<u64, Error>;
 
-    /// Get the blocks from a peer.
+    /// Get blocks from a peer, starting from the `from_number`.
     fn get_blocks(&self, peer_id: &str, from_number: u64) -> Result<Vec<Block>, Error>;
 
     /// Broadcast a transaction to the network.

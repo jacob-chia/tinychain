@@ -20,17 +20,16 @@ where
         loop {
             ticker.recv().unwrap();
 
-            let local_number = self.latest_block_number();
-            let best_peer = self.get_best_peer(local_number);
+            let local_height = self.block_height();
+            let best_peer = self.get_best_peer(local_height);
             if best_peer.is_none() {
                 continue;
             }
             let best_peer = best_peer.unwrap();
 
-            let from_number = local_number.map(|num| num + 1).unwrap_or_default();
             let _ = self
                 .peer_proxy
-                .get_blocks(&best_peer, from_number)
+                .get_blocks(&best_peer, local_height)
                 .map(|blocks| {
                     for block in blocks {
                         self.add_block_stop_mining(block);
@@ -41,22 +40,19 @@ where
 
     /// Add a block and stop the current mining process.
     pub fn add_block_stop_mining(&self, block: Block) {
-        if self.add_block(block) {
+        if self.add_block(block).is_ok() {
             self.cancel_signal_s.send(()).unwrap();
         }
     }
 
-    fn get_best_peer(&self, local_number: Option<u64>) -> Option<String> {
-        let (mut best_peer, mut best_number) = (None, local_number);
+    fn get_best_peer(&self, local_height: u64) -> Option<String> {
+        let (mut best_peer, mut best_height) = (None, local_height);
         let peers = self.peer_proxy.known_peers();
 
         for peer in peers {
-            let _ = self.peer_proxy.get_best_number(&peer).map(|number| {
-                if number.is_none() {
-                    return;
-                }
-                if best_number.is_none() || number.unwrap() > best_number.unwrap() {
-                    best_number = number;
+            let _ = self.peer_proxy.get_block_height(&peer).map(|height| {
+                if best_height < height {
+                    best_height = height;
                     best_peer = Some(peer);
                 }
             });
