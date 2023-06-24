@@ -212,10 +212,10 @@ impl DerefMut for HttpPeer {
 
 ### 演示账户
 
-- `Treasury`: "2bde5a91-6411-46ba-9173-c3e075d32100"
-- `Alice`: "3d211869-2505-4394-bd99-0c76eb761bf9"
-- `Bob`: "16d5e01e-709a-4536-a4f2-9f069070c51a"
-- `Emma`: "346b4cd8-10b6-47ba-a091-6a57bb1afcf9"
+- `Treasury`: "0x3b079221eae192b39643f0c28aefcefbf68d5430"
+- `Alice`: "0xb98836a093828d1c97d26eba9270a670652231e1"
+- `Bob`: "0x9f366a0f10393629c60f48489209fb2361b7543e"
+- `Emma`: "0xddc678d21a998a6332e211f1a5c7c4db3a2632d5"
 
 ### 数据准备
 
@@ -231,11 +231,11 @@ impl DerefMut for HttpPeer {
 # -b bootstrap 地址，即在Peers网络中正在运行的任意节点地址
 
 # Alice，第一个节点不需要指定 -b
-RUST_LOG=info ./target/debug/tinychain run -a "127.0.0.1:8000" -m "3d211869-2505-4394-bd99-0c76eb761bf9" -d "./db/"
+RUST_LOG=info ./target/debug/tinychain run -a "127.0.0.1:8000" -m "0xb98836a093828d1c97d26eba9270a670652231e1" -d "./db/"
 # Bob
-RUST_LOG=info ./target/debug/tinychain run -a "127.0.0.1:8001" -m "16d5e01e-709a-4536-a4f2-9f069070c51a" -d "./db1/" -b "127.0.0.1:8000"
+RUST_LOG=info ./target/debug/tinychain run -a "127.0.0.1:8001" -m "0x9f366a0f10393629c60f48489209fb2361b7543e" -d "./db1/" -b "127.0.0.1:8000"
 # Emma
-RUST_LOG=info ./target/debug/tinychain run -a "127.0.0.1:8002" -m "346b4cd8-10b6-47ba-a091-6a57bb1afcf9" -d "./db2/" -b "127.0.0.1:8001"
+RUST_LOG=info ./target/debug/tinychain run -a "127.0.0.1:8002" -m "0xddc678d21a998a6332e211f1a5c7c4db3a2632d5" -d "./db2/" -b "127.0.0.1:8001"
 ```
 
 ![](img/tiny-chain-peers-connected.png)
@@ -255,20 +255,20 @@ curl http://localhost:8000/blocks?from_number=0 | jq
 
 ```sh
 # 查询Treasury的下一个nonce，每笔Tx的nonce要加一
-curl -X GET http://localhost:8002/account/nonce?account=2bde5a91-6411-46ba-9173-c3e075d32100
+curl -X GET http://localhost:8002/account/nonce?account=0x3b079221eae192b39643f0c28aefcefbf68d5430
 
 # Treasury -> Alice: 5000 | Miner: Emma (端口8002)
 curl -X POST http://localhost:8002/transfer \
   -H 'Content-Type: application/json' \
-  -d '{"from": "2bde5a91-6411-46ba-9173-c3e075d32100", "to": "3d211869-2505-4394-bd99-0c76eb761bf9", "value": 5000, "nonce": 1}'
+  -d '{"from": "0x3b079221eae192b39643f0c28aefcefbf68d5430", "to": "0xb98836a093828d1c97d26eba9270a670652231e1", "value": 5000, "nonce": 0}'
 
 # Treasury -> Bob: 5000 | Miner: Emma (端口8002)
 curl -X POST http://localhost:8002/transfer \
   -H 'Content-Type: application/json' \
-  -d '{"from": "2bde5a91-6411-46ba-9173-c3e075d32100", "to": "16d5e01e-709a-4536-a4f2-9f069070c51a", "value": 5000, "nonce": 2}'
+  -d '{"from": "0x3b079221eae192b39643f0c28aefcefbf68d5430", "to": "0x9f366a0f10393629c60f48489209fb2361b7543e", "value": 5000, "nonce": 7}'
 ```
 
-4. Emma 节点生成了 1 个区块
+1. Emma 节点生成了 1 个区块
 
 ![](img/tiny-chain-emma-mined-1-block.png)
 

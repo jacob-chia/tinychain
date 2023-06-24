@@ -6,19 +6,20 @@ use crossbeam_channel::unbounded;
 use log::info;
 
 use tokio::task;
-use wallet;
+use wallet::{self, Wallet};
 
 mod config;
 mod error;
 mod network;
 mod node;
+mod schema;
 mod state;
 mod types;
 mod utils;
 
 use network::{http, p2p};
-use node::Node;
-use state::FileState;
+use node::{Genesis, Node};
+use state::SledState;
 
 const MINING_DIFFICULTY: usize = 2;
 
@@ -31,11 +32,11 @@ struct Opts {
 
 #[derive(Debug, Subcommand)]
 enum SubCommand {
-    /// Create a new account with a new set of a elliptic-curve keypair
+    /// Create a new account for signing transactions
     NewAccount {
-        /// the node data dir where the account will be stored
-        #[arg(short, long, default_value_t = String::from("./db/"))]
-        datadir: String,
+        /// the keystore directory, default is `./db/keystore/`
+        #[arg(short, long, default_value_t = String::from("./db/keystore/"))]
+        keystore_dir: String,
     },
     /// Create a random secret key for generating local peer id and keypair
     NewSecret,
@@ -53,17 +54,17 @@ async fn main() {
     let opts = Opts::parse();
 
     match opts.subcmd {
-        SubCommand::NewAccount { datadir } => new_account(&datadir),
+        SubCommand::NewAccount { keystore_dir } => new_account(&keystore_dir),
         SubCommand::NewSecret => new_secret_key(),
         SubCommand::Run { config } => run(&config).await,
     }
 }
 
-fn new_account(datadir: &str) {
-    wallet::init_keystore_dir(datadir);
-    let acc = wallet::new_account().unwrap();
+fn new_account(keystore_dir: &str) {
+    let wallet = Wallet::new(keystore_dir);
+    let acc = wallet.new_account().unwrap();
     info!("📣 New account: {:?}", acc);
-    info!("📣 Saved in: {:?}", wallet::get_keystore_dir());
+    info!("📣 Saved in: {:?}", keystore_dir);
 }
 
 fn new_secret_key() {
@@ -72,24 +73,37 @@ fn new_secret_key() {
 }
 
 async fn run(config_file: &str) {
+    // Load config.
     let Config {
-        datadir,
+        data_dir,
+        genesis_file,
         http_addr,
-        miner,
+        author,
         p2p: p2p_config,
-    } = Config::load(config_file).expect("Failed to load config file");
-    let http_addr = http_addr.parse().expect("Invalid http address");
-
-    wallet::init_keystore_dir(&datadir);
-    state::init_database_dir(&datadir);
+        wallet,
+    } = Config::load(config_file).unwrap();
+    let http_addr = http_addr.parse().unwrap();
+    let genesis = Genesis::load(&genesis_file).unwrap();
+    info!("📣 Genesis: {:?}", genesis);
 
     // When receiving a new block from other peers, a signal will be sent to the miner to stop mining.
     let (cancel_signal_s, cancel_signal_r) = unbounded();
-    let file_state = FileState::new(MINING_DIFFICULTY).unwrap();
+
+    let wallet = Wallet::new(&wallet.keystore_dir);
+    let sled_state = SledState::new(&data_dir, genesis.into_balances(), MINING_DIFFICULTY).unwrap();
     let (p2p_client, event_loop, p2p_server) = p2p::new(p2p_config).unwrap();
 
-    // Create a new node with `FileState` and `P2pClient`.
-    let node = Arc::new(Node::new(miner, file_state, p2p_client, cancel_signal_s.clone()).unwrap());
+    let node = Arc::new(
+        Node::new(
+            author,
+            sled_state,
+            p2p_client,
+            wallet,
+            cancel_signal_s.clone(),
+            MINING_DIFFICULTY,
+        )
+        .unwrap(),
+    );
     let miner = node.clone();
     let syncer = node.clone();
 

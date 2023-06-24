@@ -51,7 +51,7 @@ cargo build
 #### 相关依赖
 
 - [ethers-signers](https://docs.rs/ethers-signers/latest/ethers_signers/)：账户管理
-- [ethers-core](https://docs.rs/ethers-core/latest/ethers_core/)：只用到了Hash函数和Hash结果的类型
+- [ethers-core](https://docs.rs/ethers-core/latest/ethers_core/)：只用到了 Hash 函数和 Hash 结果的类型
 - [once-cell](https://docs.rs/once_cell/latest/once_cell/)：lazy static
 - [anyhow](https://docs.rs/anyhow/latest/anyhow/)：错误处理
 
@@ -63,18 +63,21 @@ RUST_LOG=debug ./target/debug/tinychain new-account
 ```
 
 演示账户说明：
-- `Treasury`: "2bde5a91-6411-46ba-9173-c3e075d32100"
-- `Alice`: "3d211869-2505-4394-bd99-0c76eb761bf9"
-- `Bob`: "16d5e01e-709a-4536-a4f2-9f069070c51a"
-- `Miner`: "346b4cd8-10b6-47ba-a091-6a57bb1afcf9"
+
+- `Treasury`: "0x3b079221eae192b39643f0c28aefcefbf68d5430"
+- `Alice`: "0xb98836a093828d1c97d26eba9270a670652231e1"
+- `Bob`: "0x9f366a0f10393629c60f48489209fb2361b7543e"
+- `Miner`: "0xddc678d21a998a6332e211f1a5c7c4db3a2632d5"
 
 #### 关键代码
 
 1. 如果想定义`堆上`常量或`运行时`才能确定值的常量，怎么办？
-  - once_cell 或 lazy_static
-  - once_cell可能会被纳入std: `https://github.com/rust-lang/rfcs/pull/2788`
+
+- once_cell 或 lazy_static
+- once_cell 可能会被纳入 std: `https://github.com/rust-lang/rfcs/pull/2788`
 
 比如如下代码，编译器会提示你应该使用`once_cell`：
+
 ```rs
 use std::collections::HashMap;
 
@@ -104,12 +107,13 @@ const fn num() -> u64 {
 2. 如何优雅地处理错误？
 
 - 先上结论
+
   - [anyhow](https://docs.rs/anyhow/latest/anyhow/): 不关心错误类型，只想简单地处理错误 —— 适用于`bin`
   - [thiserror](https://docs.rs/thiserror/latest/thiserror/): 定义清晰的错误类型 —— 适用于`lib`
 
 - 使用`?`传播错误，前提是`?`处的错误可以自动转为`返回值声明的ErrorType`
   - `使用anyhow::Error`: 任意错误类型均可转为`anyhow::Error`（示例如下）
-  - `自定义错误类型`: 需要实现`From` trait来进行类型转换
+  - `自定义错误类型`: 需要实现`From` trait 来进行类型转换
 
 ```rs
 // wallet/mod.rs
@@ -136,12 +140,12 @@ pub fn sign(msg: &str, account: &str) -> Result<String> {
 
 ```sh
 cargo build
-RUST_LOG=debug ./target/debug/tinychain run -m "346b4cd8-10b6-47ba-a091-6a57bb1afcf9"
+RUST_LOG=debug ./target/debug/tinychain run -m "0xddc678d21a998a6332e211f1a5c7c4db3a2632d5"
 ```
 
 #### 关键代码
 
-1. builder模式（`node/mod.rs`）
+1. builder 模式（`node/mod.rs`）
 
 ```rs
 let tx1 = Tx::builder()
@@ -153,9 +157,10 @@ let tx1 = Tx::builder()
     .sign();
 ```
 
-2. `derive macro`派生宏怎么用？（几乎所有struct都用到了派生宏）
-  - 初始状态：一个都不需要
-  - 在写代码过程中`根据编译器提示`逐个添加
+2. `derive macro`派生宏怎么用？（几乎所有 struct 都用到了派生宏）
+
+- 初始状态：一个都不需要
+- 在写代码过程中`根据编译器提示`逐个添加
 
 3. 如何从一个结构体实例中“拿走”一个字段的所有权？（`state.rs,block.rs`）
 
@@ -172,7 +177,7 @@ let block = block_kv.take_block();
 self.apply_block(block)?;
 ```
 
-4. Rust中如何使用`HashMap`？（`state.rs`）
+4. Rust 中如何使用`HashMap`？（`state.rs`）
 
 ```rs
 // balances: HashMap<String, u64>,
@@ -185,9 +190,10 @@ self.apply_block(block)?;
 *self.account2nonce.entry(tx.from.to_owned()).or_default() = tx.nonce;
 ```
 
-5. slice的比较（`state.rs`）
-  - slice依附于具体的数据结构，就像数据库中`视图`和`表`的关系
-  - 两个slice对比，或者 slice与具体的数据结构对比，只取决于`长度`和`内容`，比如下面这块代码：
+5. slice 的比较（`state.rs`）
+
+- slice 依附于具体的数据结构，就像数据库中`视图`和`表`的关系
+- 两个 slice 对比，或者 slice 与具体的数据结构对比，只取决于`长度`和`内容`，比如下面这块代码：
 
 ```rs
 fn main() {
@@ -213,10 +219,11 @@ fn is_valid_hash(&self, hash: &H256) -> bool {
 }
 ```
 
-6. 更精细的可见性控制（struct中的字段）
-  - [官方文档](https://doc.rust-lang.org/reference/visibility-and-privacy.html)
+6. 更精细的可见性控制（struct 中的字段）
 
-7. 在iterator上执行`map/filter/take`等操作（`block.rs`）
+- [官方文档](https://doc.rust-lang.org/reference/visibility-and-privacy.html)
+
+7. 在 iterator 上执行`map/filter/take`等操作（`block.rs`）
 
 ```rs
 // Iterator
@@ -241,6 +248,7 @@ pub fn block_reward(&self) -> u64 {
 ```
 
 8. 生命周期入门，思路同派生宏（`block.rs`）
-  - 初始状态：不用
-  - 大部分情况下，编译器可以自己推断
-  - 当编译器无法推断时，它会提示你，`按照编译器的提示`加上生命周期注解
+
+- 初始状态：不用
+- 大部分情况下，编译器可以自己推断
+- 当编译器无法推断时，它会提示你，`按照编译器的提示`加上生命周期注解

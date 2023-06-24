@@ -1,6 +1,6 @@
 fn main() {
     prost_build::Config::new()
-        .out_dir("src/network/schema")
-        .compile_protos(&["api.v1.proto"], &["src/network/schema"])
+        .out_dir("src/schema")
+        .compile_protos(&["api.v1.proto"], &["src/schema"])
         .unwrap();
 }

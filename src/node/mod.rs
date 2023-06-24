@@ -1,44 +1,44 @@
 //! The core logic of the blockchain node.
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::collections::HashMap;
 
 use crossbeam_channel::Sender;
 use dashmap::DashMap;
-use log::error;
+use wallet::Wallet;
 
-use crate::{error::Error, types::Hash};
+use crate::{error::Error, schema::*, types::Hash, utils};
 
-mod block;
+mod genesis;
 mod miner;
 mod peer;
 mod state;
 mod syncer;
-mod tx;
 
-pub use block::*;
+pub use genesis::*;
 pub use peer::*;
 pub use state::*;
-pub use tx::*;
 
 #[derive(Debug)]
 pub struct Node<S, P> {
-    /// The miner address of the node.
-    pub miner: String,
+    /// The author account of the node.
+    author: String,
     /// The pending transactions that are not yet included in a block.
-    pub pending_txs: DashMap<Hash, SignedTx>,
+    pending_txs: DashMap<Hash, SignedTx>,
     /// The mining difficulty of the node.
-    pub mining_difficulty: usize,
+    mining_difficulty: usize,
 
     // A state machine that holds the state of the blockchain.
-    pub state: Arc<RwLock<S>>,
+    state: S,
     // A proxy to interact with peers, which is initialized after the node is created.
-    pub peer_proxy: P,
+    peer_proxy: P,
+
+    // For facilitating a smooth demonstration, the node holds a wallet that stores all
+    // the keys of the users, so that it can sign transactions on behalf of the users.
+    // In the real world, every user should have their own wallet.
+    wallet: Wallet,
 
     // A channel to send a signal to the miner to stop mining.
-    pub cancel_signal_s: Sender<()>,
+    cancel_signal_s: Sender<()>,
 }
 
 impl<S, P> Node<S, P>
@@ -48,17 +48,20 @@ where
 {
     /// Create a new node with the given miner address and state.
     pub fn new(
-        miner: String,
+        author: String,
         state: S,
         peer: P,
+        wallet: Wallet,
         cancel_signal_s: Sender<()>,
+        mining_difficulty: usize,
     ) -> Result<Self, Error> {
         let node = Self {
-            miner,
+            author,
             pending_txs: DashMap::new(),
-            mining_difficulty: state.get_mining_difficulty(),
-            state: Arc::new(RwLock::new(state)),
+            mining_difficulty,
+            state: state,
             peer_proxy: peer,
+            wallet,
             cancel_signal_s,
         };
 
@@ -68,70 +71,58 @@ where
     /// Get the next nouce of the given account.
     /// The nounce is a monotonically increasing number that is used to prevent replay attacks.
     pub fn next_account_nonce(&self, account: &str) -> u64 {
-        self.state.read().unwrap().next_account_nonce(account)
+        self.state.next_account_nonce(account)
     }
 
-    /// Transfer the given value from one account to another.
+    /// Transfer the `value` from `from` to `to`. The `nonce` is used to prevent replay attacks.
+    ///
+    /// There may be multiple txs with the same `from`, and whether a tx is valid depends on
+    /// the current state of the blockchain. It means that only if the previous tx has been
+    /// applied to the state, can the next tx be checked, so we check the validity of the txs
+    /// when we do `add_block`.
     pub fn transfer(&self, from: &str, to: &str, value: u64, nonce: u64) -> Result<(), Error> {
-        let tx = Tx::builder()
-            .from(from)
-            .to(to)
-            .value(value)
-            .nonce(nonce)
-            .build()
-            .sign()?;
+        let tx = Tx::new(from, to, value, nonce);
+        let signed_tx = self.sign_tx(tx)?;
 
-        self.add_pending_tx(tx.clone())?;
-        self.peer_proxy.broadcast_tx(tx);
-
+        self.add_pending_tx(signed_tx.clone())?;
+        self.peer_proxy.broadcast_tx(signed_tx);
         Ok(())
     }
 
     /// Get blocks from the given number.
-    pub fn get_blocks(&self, from_number: u64) -> Result<Vec<Block>, Error> {
-        self.state.read().unwrap().get_blocks(from_number)
+    pub fn get_blocks(&self, from_number: u64) -> Vec<Block> {
+        self.state.get_blocks(from_number)
     }
 
-    /// Get the block with the given number.
-    pub fn get_block(&self, number: u64) -> Result<Block, Error> {
-        self.state.read().unwrap().get_block(number)
+    /// Get the block by the given number.
+    pub fn get_block(&self, number: u64) -> Option<Block> {
+        self.state.get_block(number)
     }
 
     /// Get all the balances of the accounts.
     pub fn get_balances(&self) -> HashMap<String, u64> {
-        self.state.read().unwrap().get_balances()
+        self.state.get_balances()
     }
 
-    /// Get the latest block hash.
-    pub fn latest_block_hash(&self) -> Option<Hash> {
-        self.state.read().unwrap().latest_block_hash()
+    /// Get the block height.
+    pub fn block_height(&self) -> u64 {
+        self.state.block_height()
     }
 
-    /// Get the latest block number.
-    pub fn latest_block_number(&self) -> Option<u64> {
-        self.state.read().unwrap().latest_block_number()
-    }
-
-    /// Get the next block number.
-    pub fn next_block_number(&self) -> u64 {
-        self.state.read().unwrap().next_block_number()
+    /// Get the last block hash.
+    pub fn last_block_hash(&self) -> Option<Hash> {
+        self.state.last_block().map(|b| b.hash())
     }
 
     /// Add a block to the blockchain.
-    pub fn add_block(&self, block: Block) -> bool {
-        if let Err(err) = self.state.write().unwrap().add_block(block.clone()) {
-            error!("❌ Failed to add block: {:?}", err);
-            self.remove_invalid_txs(err);
-            return false;
-        }
-
+    pub fn add_block(&self, block: Block) -> Result<Hash, Error> {
         self.remove_mined_txs(&block);
-        true
+        self.state.add_block(block)
     }
 
     /// Add a pending transaction to the transaction pool.
     pub fn add_pending_tx(&self, tx: SignedTx) -> Result<(), Error> {
-        tx.check_signature()?;
+        utils::verify_tx(&tx)?;
         self.pending_txs.entry(tx.hash()).or_insert(tx);
 
         Ok(())
@@ -143,17 +134,13 @@ where
         }
     }
 
-    fn remove_invalid_txs(&self, err: Error) {
-        let account = match err {
-            Error::InvalidTxSignature(acc) => Some(acc),
-            Error::InvalidTxNonce(acc, ..) => Some(acc),
-            Error::InsufficientBalance(acc, ..) => Some(acc),
-            _ => None,
-        };
+    // Sign a transaction on behalf of the user.
+    fn sign_tx(&self, tx: Tx) -> Result<SignedTx, Error> {
+        let sig = self.wallet.sign(&tx.message(), &tx.from)?;
 
-        // Remove all the transactions from the account that caused the error.
-        if let Some(acc) = account {
-            self.pending_txs.retain(|_, tx| tx.from != acc);
-        }
+        Ok(SignedTx {
+            tx: Some(tx),
+            sig: sig.into(),
+        })
     }
 }

@@ -12,10 +12,9 @@ use tokio_stream::{Stream, StreamExt};
 
 use crate::{
     error::Error,
-    node::{Block, Node, Peer, SignedTx, State},
+    node::{Node, Peer, State},
+    schema::*,
 };
-
-use super::schema::{self, request, BestNumberResp, BlocksResp, Method, Request, Response};
 
 // Re-export libp2p functions.
 pub use tinyp2p::new_secret_key;
@@ -82,15 +81,13 @@ impl EventLoop {
         let req = req.unwrap();
         info!("📣 >> [IN] {:?}", req);
         let resp = match req.method() {
-            Method::BestNumber => {
-                let best_number = node.latest_block_number();
-                Response::new_best_number_resp(best_number)
+            Method::Height => {
+                let block_height = node.block_height();
+                Response::new_block_height_resp(block_height)
             }
             Method::Blocks => {
                 let blocks = match req.body.unwrap() {
-                    request::Body::BlocksReq(req) => {
-                        node.get_blocks(req.from_number).unwrap_or_default()
-                    }
+                    request::Body::BlocksReq(req) => node.get_blocks(req.from_number),
                     _ => vec![],
                 };
                 Response::new_blocks_resp(blocks)
@@ -108,25 +105,20 @@ impl EventLoop {
     {
         match topic {
             Topic::Block => {
-                let block = schema::Block::try_from(message);
-                if block.is_err() {
-                    error!("❌ >> [IN-BROADCAST] Invalid block: {:?}", block.err());
-                    return;
+                if let Ok(block) = Block::try_from(message) {
+                    info!("📣 >> [IN-BROADCAST] {}", block);
+                    node.add_block_stop_mining(block);
+                } else {
+                    error!("❌ >> [IN-BROADCAST] Invalid block");
                 }
-
-                let block = block.unwrap().into();
-                info!("📣 >> [IN-BROADCAST] {:?}", block);
-                node.add_block_stop_mining(block);
             }
             Topic::Tx => {
-                let tx = schema::SignedTx::try_from(message);
-                if tx.is_err() {
-                    error!("❌ [IN-BROADCAST] Invalid tx: {:?}", tx.err());
-                    return;
+                if let Ok(tx) = SignedTx::try_from(message) {
+                    info!("📣 >> [IN-BROADCAST] {}", tx);
+                    let _ = node.add_pending_tx(tx);
+                } else {
+                    error!("❌ >> [IN-BROADCAST] Invalid tx");
                 }
-                let tx = tx.unwrap();
-                info!("📣 >> [IN-BROADCAST] {:?}", tx);
-                let _ = node.add_pending_tx(tx.into());
             }
         }
     }
@@ -154,45 +146,37 @@ impl Peer for P2pClient {
     fn known_peers(&self) -> Vec<String> {
         let peers = self.get_known_peers();
         // Getting self known peers doesn't involve any network calls,
-        // so the log is not tagged with `[IN]` or `[OUT]`.
+        // so the log is not tagged with `[IN]/[OUT]`.
         info!("📣 Known peers {:?}", peers);
         peers
     }
 
-    fn get_best_number(&self, peer_id: &str) -> Result<Option<u64>, Error> {
-        let req = Request::new_best_number_req();
-        info!("📣 >> [OUT] get_best_number from: {}", peer_id);
+    fn get_block_height(&self, peer_id: &str) -> Result<u64, Error> {
+        let req = Request::new_block_height_req();
+        info!("📣 >> [OUT] get_block_height from: {}", peer_id);
         let resp: Response = self.blocking_request(peer_id, req.into())?.try_into()?;
-        info!("📣 << [IN] get_best_number response: {:?}", resp);
+        info!("📣 << [IN] get_block_height response: {:?}", resp);
 
-        Ok(BestNumberResp::from(resp).best_number)
+        Ok(BlockHeightResp::from(resp).block_height)
     }
 
     fn get_blocks(&self, peer_id: &str, from_number: u64) -> Result<Vec<Block>, Error> {
         let req = Request::new_blocks_req(from_number);
         info!("📣 >> [OUT] get_blocks from: {}, by: {:?}", peer_id, req);
         let resp: Response = self.blocking_request(peer_id, req.into())?.try_into()?;
-        info!("📣 << [IN] get_blocks response: {:?}", resp);
-
-        // DTO (schema::Block) -> DO (node::Block)
-        let blocks = BlocksResp::from(resp)
-            .blocks
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        let blocks = BlocksResp::from(resp).blocks;
+        info!("📣 << [IN] get_blocks count: {:?}", blocks.len());
 
         Ok(blocks)
     }
 
     fn broadcast_tx(&self, tx: SignedTx) {
-        info!("📣 >> [OUT-BROADCAST] tx: {:?}", tx);
-        let tx = schema::SignedTx::from(tx);
+        info!("📣 >> [OUT-BROADCAST] tx: {}", tx);
         self.broadcast(Topic::Tx, tx.into());
     }
 
     fn broadcast_block(&self, block: Block) {
-        info!("📣 >> [OUT-BROADCAST] block: {:?}", block);
-        let block = schema::Block::from(block);
-        self.broadcast(Topic::Block, block.into());
+        info!("📣 >> [OUT-BROADCAST] block: {}", block);
+        self.broadcast(Topic::Block, Vec::from(&block));
     }
 }

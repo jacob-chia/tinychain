@@ -6,11 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-thiserror.workspace = true
-once_cell.workspace = true
+k256 = { version = "0.13", features = ["ecdsa"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+sha3 = "0.10"
 
-ethers-core = "2.0"
-ethers-signers = "2.0"
+hex.workspace = true
+sled.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

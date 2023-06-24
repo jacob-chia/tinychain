@@ -1,104 +1,125 @@
-//! A wallet for managing accounts and signing messages.
+//! A wallet for managing accounts and signing/verifying transactions.
 //!
-//! This project is primarily focused on the `tinychain` (the root package),
-//! so for simplicity this crate wraps the Ethereum wallet instead of implementing a new one.
-//!
-//! In addition, to facilitate a smooth demonstration of tinychain functionality, we store the keystore locally and use a
-//! default user password (774411), allowing the tinychain to sign a transaction or block without user intervention.
+//! In the real world, a user must sign a transaction before it is added to a block.
+//! However, to easily demonstrate tinychain functionality, we store all user keys locally,
+//! allowing a node to sign a transaction without user intervention.
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    str::FromStr,
+use k256::{
+    ecdsa::{SigningKey, VerifyingKey},
+    schnorr::signature::DigestVerifier,
 };
+use rand_core::OsRng;
+use serde::Deserialize;
+use sha3::{Digest, Keccak256};
 
-use ethers_core::{rand::thread_rng, types::Signature, utils::hash_message};
-use ethers_signers::{LocalWallet, Signer};
-use once_cell::sync::OnceCell;
+mod error;
+mod types;
 
-pub mod error;
 pub use error::WalletError;
+pub use types::{Address, Signature};
 
-const PASSWORD: &str = "774411";
-static KEYSTORE_DIR: OnceCell<PathBuf> = OnceCell::new();
-
-pub fn init_keystore_dir(datadir: impl AsRef<Path>) {
-    let mut path = PathBuf::from(datadir.as_ref());
-    path.push("keystore");
-
-    KEYSTORE_DIR.get_or_init(|| path);
+#[derive(Debug, Clone)]
+pub struct Wallet {
+    db: sled::Db,
 }
 
-pub fn new_account() -> Result<String, WalletError> {
-    let dir = get_keystore_dir();
-    fs::create_dir_all(&dir)?;
+impl Wallet {
+    pub fn new(keystore_dir: &str) -> Self {
+        Self {
+            db: sled::open(keystore_dir).unwrap(),
+        }
+    }
 
-    let (_, account) = LocalWallet::new_keystore(&dir, &mut thread_rng(), PASSWORD, None).unwrap();
-    Ok(account)
+    pub fn new_account(&self) -> Result<Address, WalletError> {
+        let privkey = SigningKey::random(&mut OsRng);
+        let address = gen_address(&privkey);
+        let key_bytes = privkey.to_bytes().to_vec();
+        self.db.insert(address.as_ref(), key_bytes)?;
+
+        Ok(address)
+    }
+
+    pub fn sign(&self, msg: &[u8], addr: &str) -> Result<Signature, WalletError> {
+        let privkey = self.get_privkey(addr)?;
+        let digest = Keccak256::new_with_prefix(msg);
+        let (sig, recid) = privkey.sign_digest_recoverable(digest)?;
+
+        Ok(Signature::from((sig, recid)))
+    }
+
+    fn get_privkey(&self, addr: &str) -> Result<SigningKey, WalletError> {
+        let address =
+            Address::try_from(addr).map_err(|_| WalletError::AccountNotFound(addr.to_string()))?;
+
+        let privkey = self
+            .db
+            .get(address.as_ref())?
+            .map(|k| k.to_vec())
+            .ok_or_else(|| WalletError::AccountNotFound(addr.to_string()))?;
+
+        SigningKey::from_bytes(privkey.as_slice().into())
+            .map_err(|_| WalletError::AccountNotFound(addr.to_string()))
+    }
 }
 
-pub fn sign(msg: &str, account: &str) -> Result<String, WalletError> {
-    let sig = get_wallet(account)?
-        .sign_hash(hash_message(msg))?
-        .to_string();
+pub fn verify_signature(msg: &[u8], sig: &[u8]) -> Result<(), WalletError> {
+    let signature = Signature::from(sig);
+    let (sig, recid) = signature.try_into()?;
+    let digest = Keccak256::new_with_prefix(msg);
 
-    Ok(sig)
-}
+    let recovered_key = VerifyingKey::recover_from_digest(digest.clone(), &sig, recid)
+        .map_err(|_| WalletError::InvalidSignature)?;
 
-pub fn verify(msg: &str, sig: &str, account: &str) -> Result<(), WalletError> {
-    let wallet = get_wallet(account)?;
-    let sig = Signature::from_str(sig)?;
-    sig.verify(msg, wallet.address())?;
+    recovered_key
+        .verify_digest(digest, &sig)
+        .map_err(|_| WalletError::InvalidSignature)?;
 
     Ok(())
 }
 
-pub fn get_keystore_dir() -> PathBuf {
-    KEYSTORE_DIR.get().unwrap().to_owned()
+fn gen_address(privkey: &SigningKey) -> Address {
+    let pubkey = privkey.verifying_key().to_encoded_point(false);
+    let pubkey = pubkey.as_bytes();
+    let hash = Keccak256::digest(&pubkey[1..]);
+
+    let mut bytes = [0u8; 20];
+    bytes.copy_from_slice(&hash[12..]);
+    Address::from(bytes)
 }
 
-fn get_wallet(account: &str) -> Result<LocalWallet, WalletError> {
-    let mut keypath = get_keystore_dir();
-    keypath.push(account);
-
-    LocalWallet::decrypt_keystore(&keypath, PASSWORD)
-        .map_err(|_| WalletError::AccountNotFound(account.to_string()))
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct WalletConfig {
+    pub keystore_dir: String,
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::*;
-
-    #[test]
-    fn keystore_dir_can_only_be_initialized_once() {
-        let mut tmpdir = tempdir_with_prefix("tmp");
-        let _ = fs::remove_dir_all(&tmpdir);
-
-        init_keystore_dir(tmpdir.to_str().unwrap());
-        tmpdir.push("keystore");
-        assert_eq!(tmpdir, get_keystore_dir());
-
-        init_keystore_dir("/another/dir");
-        assert_eq!(tmpdir, get_keystore_dir());
-    }
 
     #[test]
     fn wallet_works() {
         let tmpdir = tempdir_with_prefix("tmp");
         let _ = fs::remove_dir_all(&tmpdir);
 
-        init_keystore_dir(tmpdir.to_str().unwrap());
-        let acc = new_account().unwrap();
-        let msg = "hello world";
-        let sig = sign(msg, &acc).unwrap();
-        assert!(verify(msg, &sig, &acc).is_ok());
+        let wallet = Wallet::new(&tmpdir);
+        let addr = wallet.new_account().unwrap();
+        let msg = b"hello world";
+        let sig = wallet.sign(msg, &addr.to_string()).unwrap();
+        let sig_bytes: Vec<u8> = sig.into();
+
+        assert!(verify_signature(msg, &sig_bytes).is_ok());
     }
 
-    fn tempdir_with_prefix(prefix: &str) -> PathBuf {
+    fn tempdir_with_prefix(prefix: &str) -> String {
         tempfile::Builder::new()
             .prefix(prefix)
             .tempdir()
             .unwrap()
-            .into_path()
+            .path()
+            .to_str()
+            .unwrap()
+            .to_string()
     }
 }

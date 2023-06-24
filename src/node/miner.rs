@@ -28,17 +28,15 @@ where
                         continue;
                     }
 
-                    let block = Block::builder()
-                    .parent(self.latest_block_hash().unwrap_or_default())
-                    .number(self.next_block_number())
-                    .time(utils::unix_timestamp())
-                    .nonce(utils::gen_random_number())
-                    .miner(&self.miner)
-                    .txs(self.get_pending_txs())
-                    .build();
+                    let block = Block::new(
+                        self.last_block_hash().unwrap_or_default(),
+                        self.block_height(),
+                        self.author.clone(),
+                        self.get_pending_txs(),
+                    );
 
                     if let Some(block) = self.pow(block, cancel_signal_r.clone()) {
-                        if self.add_block(block.clone()) {
+                        if self.add_block(block.clone()).is_ok() {
                             self.peer_proxy.broadcast_block(block)
                         }
                     }
@@ -81,18 +79,18 @@ where
 
                 // To demonstrate that different miners have different mining power,
                 // we mock a heavy work that takes random seconds.
-                std::thread::sleep(Duration::from_secs(block.header.nonce % 10));
+                std::thread::sleep(Duration::from_secs(block.nonce() % 10));
             }
             attempt += 1;
             block.update_nonce_and_time();
         }
 
         info!("📣 Mined new Block '{}' 🎉🎉🎉:", block.hash());
-        info!("📣 \tHeight: '{}'", block.header.number);
-        info!("📣 \tNonce: '{}'", block.header.nonce);
-        info!("📣 \tCreated: '{}'", block.header.timestamp);
-        info!("📣 \tMiner: '{}'", block.header.author);
-        info!("📣 \tParent: '{}'", block.header.parent_hash);
+        info!("📣 \tNumber: '{}'", block.number());
+        info!("📣 \tNonce: '{}'", block.nonce());
+        info!("📣 \tCreated: '{}'", block.timestamp());
+        info!("📣 \tMiner: '{}'", block.author());
+        info!("📣 \tParent: '{}'", block.parent_hash());
         info!("📣 \tAttempt: '{}'", attempt);
         info!("📣 \tTime: {:?}", timer.elapsed());
         info!("🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉\n");

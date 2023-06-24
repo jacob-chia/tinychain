@@ -5,6 +5,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use crate::error::Error;
+
 // Serialize and deserialize Hash as a '0x'-prefixed hex string.
 #[derive(Default, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
@@ -17,24 +19,11 @@ impl Hash {
 
     fn fmt_as_hex(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "0x")?;
+
         for byte in self.0.iter() {
             write!(f, "{:02x}", byte)?;
         }
         Ok(())
-    }
-}
-
-// Implement Debug so that Hash can be printed as a hex string.
-impl Debug for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_as_hex(f)
-    }
-}
-
-// Implement Display so that Hash can be printed as a hex string.
-impl fmt::Display for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_as_hex(f)
     }
 }
 
@@ -56,8 +45,22 @@ impl From<[u8; 32]> for Hash {
 impl From<Vec<u8>> for Hash {
     fn from(bytes: Vec<u8>) -> Self {
         let mut hash = [0u8; 32];
-        hash.copy_from_slice(&bytes);
+        hash.copy_from_slice(bytes.as_slice());
         Self(hash)
+    }
+}
+
+impl TryFrom<String> for Hash {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let val = if value.starts_with("0x") {
+            &value[2..]
+        } else {
+            &value
+        };
+
+        Ok(hex::decode(val).map(Self::from)?)
     }
 }
 
@@ -67,25 +70,30 @@ impl From<Hash> for Vec<u8> {
     }
 }
 
-impl TryFrom<String> for Hash {
-    type Error = hex::FromHexError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let val = if value.starts_with("0x") {
-            &value[2..]
-        } else {
-            &value
-        };
-
-        hex::decode(val).map(Self::from)
-    }
-}
-
 impl From<Hash> for String {
     fn from(hash: Hash) -> Self {
         let mut s = String::from("0x");
         s.push_str(&hex::encode(hash.0));
         s
+    }
+}
+
+// Implement Debug so that Hash can be printed as a hex string.
+impl Debug for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "0x")?;
+
+        for byte in self.0.iter() {
+            write!(f, "{:02x}", byte)?;
+        }
+        Ok(())
+    }
+}
+
+// Implement Display so that Hash can be printed as a hex string.
+impl fmt::Display for Hash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_as_hex(f)
     }
 }
 
@@ -100,43 +108,29 @@ mod tests {
     }
 
     #[test]
-    fn hash_from_array_and_deref() {
-        let mut arr = [0u8; 32];
-        arr[0] = 1;
-        arr[31] = 7;
-
-        let hash = Hash::from(arr);
-        // `Deref` allows us to treat `Hash` as a slice.
-        assert_eq!(&hash[..], &arr[..]);
-    }
-
-    #[test]
-    fn convert_between_hash_and_vec() {
-        let mut vec = vec![0u8; 32];
-        vec[0] = 1;
-        vec[31] = 7;
-        let hash = Hash::from(vec.clone());
-        assert_eq!(&hash[..], &vec[..]);
-
-        // Convert back to Vec<u8>
-        let vec2: Vec<u8> = hash.into();
-        assert_eq!(vec, vec2);
-    }
-
-    #[test]
-    fn convert_between_hash_and_string() {
-        // Test with '0x' prefix
+    fn hash_from() {
         let str = "0x000036755a024ef491b6710fe765e06e33a616f83b8a33c6a1963ab20f6e5bdb";
-        let expected = hex::decode(&str[2..]).unwrap();
+        let bytes = hex::decode(&str[2..]).unwrap();
+        let arr: [u8; 32] = bytes.as_slice().try_into().unwrap();
+
+        let hash1 = Hash::from(arr);
+        assert_eq!(&hash1[..], &arr[..]);
+
+        let hash2 = Hash::from(bytes);
+        assert_eq!(hash1, hash2);
+
+        let hash3 = Hash::try_from(str.to_string()).unwrap();
+        assert_eq!(hash2, hash3);
+    }
+
+    #[test]
+    fn hash_into() {
+        let str = "0x000036755a024ef491b6710fe765e06e33a616f83b8a33c6a1963ab20f6e5bdb";
         let hash = Hash::try_from(str.to_string()).unwrap();
-        assert_eq!(&hash[..], &expected[..]);
 
-        // Test without '0x' prefix
-        let str1 = str[2..].to_string();
-        let hash = Hash::try_from(str1).unwrap();
-        assert_eq!(&hash[..], &expected[..]);
+        let bytes: Vec<u8> = hash.into();
+        assert_eq!(&bytes[..], &hash[..]);
 
-        // Convert back to String
         let str2: String = hash.into();
         assert_eq!(str, str2);
     }
