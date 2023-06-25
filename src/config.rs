@@ -62,6 +62,8 @@ mod tests {
             addr,
             secret,
             boot_node,
+            discovery_interval,
+            pubsub_topics,
             req_resp,
         }: P2pConfig = p2p;
 
@@ -78,6 +80,11 @@ mod tests {
             "12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc"
         );
         assert_eq!(boot_node.address().to_string(), "/ip4/127.0.0.1/tcp/9000");
+        assert_eq!(discovery_interval, Some(30));
+        assert_eq!(
+            pubsub_topics,
+            vec![String::from("block"), String::from("tx")]
+        );
 
         let req_resp = req_resp.unwrap();
         assert_eq!(req_resp.connection_keep_alive, Some(10));

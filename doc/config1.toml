@@ -18,6 +18,10 @@ addr = "/ip4/0.0.0.0/tcp/9001"
 secret = "GvAkcPRRc7Y8xY9kMELg3kuG3gewanxrBgdQmN8JPZQg"
 ## Boot node address. If not set, the node will start as a boot node.
 boot_node = "/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc"
+## The interval in seconds to discover the peers in the network.
+discovery_interval = 30
+## The topics to subscribe to.
+pubsub_topics = ["block", "tx"]
 
 [p2p.req_resp]
 ## Connection keep-alive time in seconds.

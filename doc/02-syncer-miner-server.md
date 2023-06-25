@@ -265,7 +265,7 @@ curl -X POST http://localhost:8002/transfer \
 # Treasury -> Bob: 5000 | Miner: Emma (端口8002)
 curl -X POST http://localhost:8002/transfer \
   -H 'Content-Type: application/json' \
-  -d '{"from": "0x3b079221eae192b39643f0c28aefcefbf68d5430", "to": "0x9f366a0f10393629c60f48489209fb2361b7543e", "value": 5000, "nonce": 7}'
+  -d '{"from": "0x3b079221eae192b39643f0c28aefcefbf68d5430", "to": "0x9f366a0f10393629c60f48489209fb2361b7543e", "value": 5000, "nonce": 8}'
 ```
 
 1. Emma 节点生成了 1 个区块

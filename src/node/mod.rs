@@ -1,6 +1,6 @@
 //! The core logic of the blockchain node.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use crossbeam_channel::Sender;
 use dashmap::DashMap;
@@ -8,6 +8,7 @@ use wallet::Wallet;
 
 use crate::{error::Error, schema::*, types::Hash, utils};
 
+mod event_handler;
 mod genesis;
 mod miner;
 mod peer;
@@ -18,8 +19,48 @@ pub use genesis::*;
 pub use peer::*;
 pub use state::*;
 
+#[derive(Debug, Clone)]
+pub struct Node<S: State, P: Peer> {
+    inner: Arc<NodeInner<S, P>>,
+}
+
+impl<S: State, P: Peer> Node<S, P> {
+    /// Create a new node with the given miner address and state.
+    pub fn new(
+        author: String,
+        state: S,
+        peer: P,
+        wallet: Wallet,
+        cancel_signal_s: Sender<()>,
+        mining_difficulty: usize,
+    ) -> Result<Self, Error> {
+        let inner = NodeInner {
+            author,
+            pending_txs: DashMap::new(),
+            mining_difficulty,
+            state: state,
+            peer_proxy: peer,
+            wallet,
+            cancel_signal_s,
+        };
+
+        Ok(Self {
+            inner: Arc::new(inner),
+        })
+    }
+}
+
+// Implement `Deref` so that `Node` can be treated as `NodeInner`.
+impl<S: State, P: Peer> Deref for Node<S, P> {
+    type Target = NodeInner<S, P>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
 #[derive(Debug)]
-pub struct Node<S, P> {
+pub struct NodeInner<S: State, P: Peer> {
     /// The author account of the node.
     author: String,
     /// The pending transactions that are not yet included in a block.
@@ -41,33 +82,7 @@ pub struct Node<S, P> {
     cancel_signal_s: Sender<()>,
 }
 
-impl<S, P> Node<S, P>
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
-    /// Create a new node with the given miner address and state.
-    pub fn new(
-        author: String,
-        state: S,
-        peer: P,
-        wallet: Wallet,
-        cancel_signal_s: Sender<()>,
-        mining_difficulty: usize,
-    ) -> Result<Self, Error> {
-        let node = Self {
-            author,
-            pending_txs: DashMap::new(),
-            mining_difficulty,
-            state: state,
-            peer_proxy: peer,
-            wallet,
-            cancel_signal_s,
-        };
-
-        Ok(node)
-    }
-
+impl<S: State, P: Peer> NodeInner<S, P> {
     /// Get the next nouce of the given account.
     /// The nounce is a monotonically increasing number that is used to prevent replay attacks.
     pub fn next_account_nonce(&self, account: &str) -> u64 {

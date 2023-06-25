@@ -1,6 +1,6 @@
 //! HTTP server that handles requests from the outside world.
 
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
 use axum::{
     extract::{Extension, Path, Query},
@@ -21,11 +21,7 @@ mod dto;
 
 pub use dto::*;
 
-pub async fn run<S, P>(addr: SocketAddr, node: Arc<Node<S, P>>)
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+pub async fn run<S: State, P: Peer>(addr: SocketAddr, node: Node<S, P>) {
     let router = new_router(node);
 
     info!("📣 HTTP server listening on {addr}");
@@ -35,11 +31,7 @@ where
         .expect("Failed to run http server");
 }
 
-pub fn new_router<S, P>(node: Arc<Node<S, P>>) -> Router
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+pub fn new_router<S: State, P: Peer>(node: Node<S, P>) -> Router {
     Router::new()
         .route("/blocks", get(get_blocks::<S, P>))
         .route("/blocks/:number", get(get_block::<S, P>))
@@ -50,45 +42,35 @@ where
         .layer(Extension(node))
 }
 
-async fn get_blocks<S, P>(
-    Extension(node): Extension<Arc<Node<S, P>>>,
+async fn get_blocks<S: State, P: Peer>(
+    Extension(node): Extension<Node<S, P>>,
     Query(params): Query<GetBlocksReq>,
-) -> impl IntoResponse
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+) -> impl IntoResponse {
     info!("📣 >> get_blocks by: {:?}", params);
-    let blocks: Vec<Block> = node
+    let blocks: Vec<BlockResp> = node
         .get_blocks(params.from_number)
         .into_iter()
-        .map(Block::from)
+        .map(BlockResp::from)
         .collect();
     info!("📣 << get_blocks response: {:?}", blocks);
 
     Json(blocks)
 }
 
-async fn get_block<S, P>(
-    Extension(node): Extension<Arc<Node<S, P>>>,
+async fn get_block<S: State, P: Peer>(
+    Extension(node): Extension<Node<S, P>>,
     Path(number): Path<u64>,
-) -> impl IntoResponse
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+) -> impl IntoResponse {
     info!("📣 >> get_block by: {:?}", number);
-    let block = node.get_block(number).map(Block::from);
+    let block = node.get_block(number).map(BlockResp::from);
     info!("📣 << get_block response: {:?}", block);
 
     Json(block)
 }
 
-async fn get_balances<S, P>(Extension(node): Extension<Arc<Node<S, P>>>) -> impl IntoResponse
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+async fn get_balances<S: State, P: Peer>(
+    Extension(node): Extension<Node<S, P>>,
+) -> impl IntoResponse {
     info!("📣 >> get_balances");
     let resp = json!({
         "last_block_hash": node.last_block_hash(),
@@ -99,14 +81,10 @@ where
     Json(resp)
 }
 
-async fn next_account_nonce<S, P>(
-    Extension(node): Extension<Arc<Node<S, P>>>,
+async fn next_account_nonce<S: State, P: Peer>(
+    Extension(node): Extension<Node<S, P>>,
     Query(params): Query<NonceReq>,
-) -> impl IntoResponse
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+) -> impl IntoResponse {
     info!("📣 >> next_account_nonce by: {:?}", params);
     let resp = json!({ "nonce": node.next_account_nonce(&params.account) });
     info!("📣 << next_account_nonce response: {:?}", resp);
@@ -114,14 +92,10 @@ where
     Json(resp)
 }
 
-async fn transfer<S, P>(
-    Extension(node): Extension<Arc<Node<S, P>>>,
+async fn transfer<S: State, P: Peer>(
+    Extension(node): Extension<Node<S, P>>,
     Json(tx): Json<TxReq>,
-) -> Result<impl IntoResponse, HttpError>
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+) -> Result<impl IntoResponse, HttpError> {
     info!("📣 >> transfer: {:?}", tx);
     let resp = node.transfer(&tx.from, &tx.to, tx.value, tx.nonce);
     info!("📣 << transfer response: {:?}", resp);

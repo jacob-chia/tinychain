@@ -9,10 +9,9 @@ mod behaviour;
 mod service;
 mod transport;
 
-pub use behaviour::Topic;
 pub use config::*;
 pub use error::Error;
-pub use service::{new, new_secret_key, Client, OutEvent, Server};
+pub use service::{new, new_secret_key, Client, EventHandler, Server};
 
 // Re-export libp2p types.
-pub use libp2p::{request_response::RequestId, Multiaddr, PeerId};
+pub use libp2p::{Multiaddr, PeerId};

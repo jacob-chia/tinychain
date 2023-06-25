@@ -8,11 +8,7 @@ use super::*;
 
 const SYNC_INTERVAL: u64 = 29;
 
-impl<S, P> Node<S, P>
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+impl<S: State, P: Peer> NodeInner<S, P> {
     /// Sync blocks from the best peer.
     pub fn sync(&self) {
         let ticker = tick(Duration::from_secs(SYNC_INTERVAL));

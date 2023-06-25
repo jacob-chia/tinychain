@@ -19,6 +19,10 @@ pub struct P2pConfig {
     /// Bootstrap node to discover the peers in the network.
     /// If not provided, the node will start as a boot node.
     pub boot_node: Option<PeerIdWithMultiaddr>,
+    /// The interval in seconds to discover the peers in the network.
+    pub discovery_interval: Option<u64>,
+    /// The topics to subscribe to.
+    pub pubsub_topics: Vec<String>,
     /// Configuration for the request-response protocol.
     pub req_resp: Option<ReqRespConfig>,
 }

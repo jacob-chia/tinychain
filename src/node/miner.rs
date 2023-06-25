@@ -12,11 +12,7 @@ use crate::utils;
 
 const MINE_INTERVAL: u64 = 11;
 
-impl<S, P> Node<S, P>
-where
-    S: State + Send + Sync + 'static,
-    P: Peer + Send + Sync + 'static,
-{
+impl<S: State, P: Peer> NodeInner<S, P> {
     pub fn mine(&self, cancel_signal_r: Receiver<()>) {
         let ticker = tick(Duration::from_secs(MINE_INTERVAL));
 
