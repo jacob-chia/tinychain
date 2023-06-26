@@ -48,7 +48,7 @@ use tokio::{
 use crate::{behaviour::*, config::P2pConfig, error::Error, transport};
 
 pub trait EventHandler: Debug + Send + 'static {
-    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, ()>;
+    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, Error>;
 
     fn handle_broadcast(&self, topic: &str, message: Vec<u8>);
 }
@@ -164,7 +164,7 @@ impl Server {
         let mut swarm = {
             let transport = transport::build_transport(local_key.clone());
             let behaviour = Behaviour::new(local_key, pubsub_topics.clone(), config.req_resp)?;
-            SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id.clone()).build()
+            SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build()
         };
         swarm.listen_on(addr)?;
 
@@ -308,7 +308,7 @@ impl Server {
     // Inbound requests are handled by the `EventHandler` which is provided by the application layer.
     fn handle_inbound_request(&mut self, request: Vec<u8>, ch: ResponseChannel<ResponseType>) {
         if let Some(handler) = self.event_handler.get() {
-            let response = handler.handle_inbound_request(request);
+            let response = handler.handle_inbound_request(request).map_err(|_| ());
             self.network_service
                 .behaviour_mut()
                 .send_response(ch, response);

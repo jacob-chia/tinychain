@@ -135,7 +135,7 @@ impl SledState {
         account2nonce: &TransactionalTree,
         tx: &SignedTx,
     ) -> ConflictableTransactionResult<(), Error> {
-        if let Err(err) = utils::verify_tx(&tx) {
+        if let Err(err) = utils::verify_tx(tx) {
             error!("❌ {}", err.to_string());
             return Err(ConflictableTransactionError::Abort(err));
         }
@@ -195,7 +195,7 @@ impl State for SledState {
                 // Apply txs
                 for tx in &block.txs {
                     // Check the tx before applying
-                    Self::check_tx(balances, account2nonce, &tx)?;
+                    Self::check_tx(balances, account2nonce, tx)?;
 
                     Self::fetch_sub(balances, tx.from.as_bytes(), tx.cost())?;
                     Self::fetch_add(balances, tx.to.as_bytes(), tx.value)?;
@@ -211,7 +211,7 @@ impl State for SledState {
             })
             .map_err(|e| match e {
                 TransactionError::Abort(e) => e,
-                _ => Error::AddBlockError,
+                _ => Error::AddBlockFailure,
             })?;
 
         Ok(block.hash())

@@ -64,7 +64,7 @@ impl<S: State, P: Peer> NodeInner<S, P> {
         while !utils::is_valid_hash(&block.hash(), mining_difficulty) {
             // Every time before a new attempt, check if there are any blocks from other peers,
             // if so, cancel this mining.
-            if let Ok(_) = cancel_signal_r.try_recv() {
+            if cancel_signal_r.try_recv().is_ok() {
                 info!("📣 Received block from other peers, cancel mining.");
                 return None;
             }

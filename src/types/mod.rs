@@ -1,5 +1,5 @@
-mod broadcast_topic;
 mod hash;
+mod pubsub_topic;
 
-pub use broadcast_topic::Topic;
 pub use hash::Hash;
+pub use pubsub_topic::Topic;

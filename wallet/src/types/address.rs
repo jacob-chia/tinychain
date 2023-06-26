@@ -63,10 +63,10 @@ impl TryFrom<&str> for Address {
     type Error = hex::FromHexError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let val = if value.starts_with("0x") {
-            &value[2..]
+        let val = if let Some(val) = value.strip_prefix("0x") {
+            val
         } else {
-            &value
+            value
         };
 
         hex::decode(val).map(Self::from)

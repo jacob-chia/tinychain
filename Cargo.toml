@@ -1,3 +1,5 @@
+# Workspace -------------------------------
+
 [workspace]
 
 members = ["wallet", "tinyp2p"]
@@ -9,21 +11,22 @@ pretty_env_logger = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.28", features = ["full"] }
-toml = "0.7"
-tempfile = "3.6"
 sled = "0.34"
+toml = "0.7"
 hex = "0.4"
+
+# Root Package ----------------------------
 
 [package]
 
 name = "tinychain"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 
 [dependencies]
-wallet = { version = "0.1.0", path = "wallet" }
-tinyp2p = { version = "0.1.0", path = "tinyp2p" }
+wallet = { version = "1.0.0", path = "wallet" }
+tinyp2p = { version = "1.0.0", path = "tinyp2p" }
 
 thiserror.workspace = true
 log.workspace = true
@@ -48,5 +51,5 @@ prost = "0.11"
 prost-build = "0.11"
 
 [dev-dependencies]
-tempfile.workspace = true
+tempfile = "3.6"
 project-root = "0.2"
