@@ -119,7 +119,7 @@ enum HttpError {
 impl From<Error> for HttpError {
     fn from(err: Error) -> Self {
         match err {
-            Error::JsonError(..) => HttpError::BadRequest(err),
+            Error::BadRequest(..) => HttpError::BadRequest(err),
             _ => HttpError::InternalServerError(err),
         }
     }

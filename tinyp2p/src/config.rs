@@ -68,7 +68,7 @@ impl P2pConfig {
 /// ```
 /// use tinyp2p::config::PeerIdWithMultiaddr;
 /// let addr: PeerIdWithMultiaddr =
-/// 	"/ip4/127.0.0.1/tcp/34567/p2p/12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc".parse().unwrap();
+///     "/ip4/127.0.0.1/tcp/34567/p2p/12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc".parse().unwrap();
 /// assert_eq!(addr.peer_id().to_base58(), "12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc");
 /// assert_eq!(addr.address().to_string(), "/ip4/127.0.0.1/tcp/34567");
 /// ```

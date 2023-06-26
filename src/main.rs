@@ -98,7 +98,7 @@ async fn run(config_file: &str) {
         sled_state,
         p2p_client,
         wallet,
-        cancel_signal_s.clone(),
+        cancel_signal_s,
         MINING_DIFFICULTY,
     )
     .unwrap();
@@ -108,7 +108,7 @@ async fn run(config_file: &str) {
     let syncer = node.clone();
 
     task::spawn(p2p_server.run());
-    task::spawn(http::run(http_addr, node.clone()));
+    task::spawn(http::run(http_addr, node));
 
     thread::spawn(move || syncer.sync());
     miner.mine(cancel_signal_r)

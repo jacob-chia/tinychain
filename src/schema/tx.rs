@@ -35,7 +35,7 @@ impl Tx {
     }
 
     pub fn hash(&self) -> Hash {
-        utils::hash_message(&&self.message())
+        utils::hash_message(&self.message())
     }
 }
 
@@ -44,7 +44,7 @@ impl Deref for SignedTx {
     type Target = Tx;
 
     fn deref(&self) -> &Self::Target {
-        &self.tx.as_ref().unwrap()
+        self.tx.as_ref().unwrap()
     }
 }
 

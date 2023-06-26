@@ -13,9 +13,9 @@ pub enum Error {
     #[error("Invalid http address: {0}")]
     InvalidHttpAddr(#[from] std::net::AddrParseError),
     #[error("Failed to decode requests")]
-    JsonError(#[from] serde_json::Error),
+    BadRequest(#[from] serde_json::Error),
     #[error("Failed to decode hash from hex")]
-    HashError(#[from] hex::FromHexError),
+    InvalidHex(#[from] hex::FromHexError),
     #[error("Invalid tx nonce from '{0}': expected '{1}', got '{2}'")]
     InvalidTxNonce(String, u64, u64),
     #[error("Balance of '{0}' is insufficient: balance '{1}', cost '{2}'")]
@@ -31,12 +31,12 @@ pub enum Error {
     #[error(transparent)]
     InvalidReqResp(#[from] prost::DecodeError),
     #[error("Failed to access db")]
-    DbError(#[from] sled::Error),
+    DbFailure(#[from] sled::Error),
     #[error("Failed to add block to db")]
-    AddBlockError,
+    AddBlockFailure,
 
     #[error(transparent)]
-    WalletError(#[from] wallet::WalletError),
+    WalletFailure(#[from] wallet::WalletError),
     #[error(transparent)]
-    P2pError(#[from] tinyp2p::Error),
+    P2pFailure(#[from] tinyp2p::Error),
 }

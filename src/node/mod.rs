@@ -38,7 +38,7 @@ impl<S: State, P: Peer> Node<S, P> {
             author,
             pending_txs: DashMap::new(),
             mining_difficulty,
-            state: state,
+            state,
             peer_proxy: peer,
             wallet,
             cancel_signal_s,
