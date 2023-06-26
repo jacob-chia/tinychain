@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 tokio.workspace = true
-tokio-stream.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -25,10 +24,9 @@ libp2p = { version = "0.51", features = [
     "gossipsub",
     "macros",
 ] }
-futures-timer = "3.0"
 linked_hash_set = "0.1"
 either = "1.8"
-itertools = "0.10"
+itertools = "0.11"
 async-trait = "0.1"
 void = "1.0"
 bs58 = "0.5"

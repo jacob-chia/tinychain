@@ -39,6 +39,12 @@ pub struct Block {
     pub txs: Vec<SignedTx>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct BlockResp {
+    pub hash: Hash,
+    pub block: Block,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct GetBlocksReq {
     pub from_number: u64,
@@ -92,11 +98,14 @@ impl From<schema::BlockHeader> for BlockHeader {
     }
 }
 
-impl From<schema::Block> for Block {
+impl From<schema::Block> for BlockResp {
     fn from(block: schema::Block) -> Self {
-        Self {
+        let hash = block.hash();
+        let block = Block {
             header: block.header.unwrap().into(),
             txs: block.txs.into_iter().map(|tx| tx.into()).collect(),
-        }
+        };
+
+        Self { hash, block }
     }
 }

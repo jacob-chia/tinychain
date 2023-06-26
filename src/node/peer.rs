@@ -1,9 +1,11 @@
+use std::fmt::Debug;
+
 use crate::error::Error;
 
 use super::{Block, SignedTx};
 
 /// Peer is a trait that defines the interface for a peer.
-pub trait Peer {
+pub trait Peer: Debug + Clone + Send + Sync + 'static {
     /// Return the peers (base58 encoded peer ids) that this node knows about.
     fn known_peers(&self) -> Vec<String>;
 

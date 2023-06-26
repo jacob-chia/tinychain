@@ -1,4 +1,4 @@
-//! [What are Transports](https://docs.libp2p.io/concepts/transports/overview/)
+//! [What is a transport](https://docs.libp2p.io/concepts/transports/overview/)
 
 use libp2p::{
     core::{muxing::StreamMuxerBox, transport::Boxed, upgrade::Version},

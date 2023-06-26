@@ -1,4 +1,4 @@
-use std::{sync::Arc, thread};
+use std::thread;
 
 use clap::{Parser, Subcommand};
 use config::Config;
@@ -91,24 +91,23 @@ async fn run(config_file: &str) {
 
     let wallet = Wallet::new(&wallet.keystore_dir);
     let sled_state = SledState::new(&data_dir, genesis.into_balances(), MINING_DIFFICULTY).unwrap();
-    let (p2p_client, event_loop, p2p_server) = p2p::new(p2p_config).unwrap();
+    let (p2p_client, mut p2p_server) = p2p::new(p2p_config).unwrap();
 
-    let node = Arc::new(
-        Node::new(
-            author,
-            sled_state,
-            p2p_client,
-            wallet,
-            cancel_signal_s.clone(),
-            MINING_DIFFICULTY,
-        )
-        .unwrap(),
-    );
+    let node = Node::new(
+        author,
+        sled_state,
+        p2p_client,
+        wallet,
+        cancel_signal_s.clone(),
+        MINING_DIFFICULTY,
+    )
+    .unwrap();
+    p2p_server.set_event_handler(node.clone());
+
     let miner = node.clone();
     let syncer = node.clone();
 
     task::spawn(p2p_server.run());
-    task::spawn(event_loop.run(node.clone()));
     task::spawn(http::run(http_addr, node.clone()));
 
     thread::spawn(move || syncer.sync());

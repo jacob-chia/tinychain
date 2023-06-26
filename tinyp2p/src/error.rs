@@ -1,6 +1,6 @@
 use std::io;
 
-use libp2p::{gossipsub, multiaddr, request_response, swarm, TransportError};
+use libp2p::{gossipsub, multiaddr, swarm, TransportError};
 use tokio::sync::oneshot;
 
 #[derive(thiserror::Error, Debug)]
@@ -17,8 +17,6 @@ pub enum Error {
     ListenError(#[from] TransportError<io::Error>),
     #[error("The remote peer rejected the request")]
     RequestRejected,
-    #[error("Problem on the network: {0}")]
-    NetworkError(request_response::OutboundFailure),
     #[error(transparent)]
     ChanError(#[from] oneshot::error::RecvError),
     #[error("Failed to build pub/sub behaviour: {0}")]

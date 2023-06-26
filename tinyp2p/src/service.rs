@@ -1,100 +1,99 @@
 //! The main entry point of this crate, composed of three parts:
 //!
-//! - `Client`: the client side of the crate, which is used to send requests to the server.
+//! - `Client`: the client side of a p2p node, which is used to send requests to a remote
+//!   peer or broadcast messages to the network.
 //!
-//! - `Server`: the server side of the crate, which is used to handle requests from the
-//!    client, and notify the application layer of events.
+//! - `Server`: the server side of a p2p node, which is used to handle requests / broadcast-messages
+//!   from remote peers.
 //!
-//! - `OutEvent`: the events sent by the server, which is used to notify the application.
+//! - `EventHandler`: the trait that defines how to handle requests / broadcast-messages from remote peers.
+//!   The application should implement this trait and pass it to the `Server`.
 //!
-//! ## How to handle swarm events?
-//!
-//! > See `handle_swarm_event` function below.
-//!
-//! 1. When to add an address to the DHT?
+//! ## When to add an address to the DHT?
 //!
 //! See [Discovery Discrepancies](https://docs.rs/libp2p/latest/libp2p/kad/index.html#important-discrepancies) first.
 //! So, every time we receive a `identify::Event::Received` event, we should manually add the peer's addresses to the DHT.
 //!
-//! 2. When to remove the peer from the DHT?
+//! ## When to remove a peer from the DHT?
 //!
 //! See [source code](https://github.com/libp2p/rust-libp2p/blob/master/protocols/kad/src/behaviour.rs#L1765) first.
 //!
-//! Currently (libp2p-0.51.3), kad never removes peers from the DHT, so we manually remove the peer when:
+//! Kademlia never removes peers from the DHT, so we manually remove the peer when:
 //! - A connected peer is unreachable (received a `ping::Event {result: Err(_), ..}`).
 //! - Cannot connect to a peer that is in the DHT (received a `SwarmEvent::OutgoingConnectionError`).
 
-use std::{collections::HashMap, io};
+use std::{cell::OnceCell, collections::HashMap, fmt::Debug, io, time::Duration};
 
 use itertools::Itertools;
 use libp2p::{
     futures::prelude::*,
-    gossipsub, identify,
+    gossipsub::{self, TopicHash},
+    identify,
     identity::ed25519,
     ping,
-    request_response::RequestId,
+    request_response::{self, OutboundFailure, RequestId, ResponseChannel},
     swarm::{SwarmBuilder, SwarmEvent},
     Multiaddr, PeerId, Swarm,
 };
-use log::{error, info};
+use log::{error, info, warn};
 use tokio::{
     select,
     sync::{
         mpsc::{self, UnboundedReceiver, UnboundedSender},
         oneshot,
     },
+    time::{self, Interval},
 };
-use tokio_stream::wrappers::UnboundedReceiverStream;
 
 use crate::{behaviour::*, config::P2pConfig, error::Error, transport};
+
+pub trait EventHandler: Debug + Send + 'static {
+    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, ()>;
+
+    fn handle_broadcast(&self, topic: &str, message: Vec<u8>);
+}
 
 #[derive(Clone, Debug)]
 pub struct Client {
     cmd_sender: UnboundedSender<Command>,
 }
 
-#[derive(Debug)]
-pub enum OutEvent {
-    InboundRequest {
-        request_id: RequestId,
-        payload: Vec<u8>,
-    },
-    Broadcast {
-        source: PeerId,
-        topic: Topic,
-        message: Vec<u8>,
-    },
-}
-
 pub struct Server {
+    /// The actual network service.
+    network_service: Swarm<Behaviour>,
+
     /// The local peer id.
     local_peer_id: PeerId,
     /// The addresses that the server is listening on.
     listened_addresses: Vec<Multiaddr>,
-    /// The actual network service.
-    network_service: Swarm<Behaviour>,
     /// The receiver of commands from the client.
     cmd_receiver: UnboundedReceiver<Command>,
-    /// The sender of events to the application layer.
-    event_sender: UnboundedSender<OutEvent>,
+    /// The handler of events from remote peers.
+    event_handler: OnceCell<Box<dyn EventHandler>>,
+
+    /// The ticker to periodically discover new peers.
+    discovery_ticker: Interval,
+    /// The pending outbound requests, awaiting for a response from the remote.
+    pending_outbound_requests: HashMap<RequestId, oneshot::Sender<ResponseType>>,
+    /// The topics will be hashed when subscribing to the gossipsub protocol,
+    /// but we need to keep the original topic names for broadcasting.
+    pubsub_topics: Vec<String>,
 }
 
-/// Create a new secret key.
+/// Create a new secret key for the p2p node.
 pub fn new_secret_key() -> String {
     let secret = ed25519::SecretKey::generate();
     bs58::encode(secret.as_ref()).into_string()
 }
 
-/// Create the `Client`, `Server` and `OutEvent` stream.
-pub fn new(config: P2pConfig) -> Result<(Client, impl Stream<Item = OutEvent>, Server), Error> {
+/// Create a new p2p node, which consists of a `Client` and a `Server`.
+pub fn new(config: P2pConfig) -> Result<(Client, Server), Error> {
     let (cmd_sender, cmd_receiver) = mpsc::unbounded_channel();
-    let (event_sender, event_receiver) = mpsc::unbounded_channel();
-    let event_stream = UnboundedReceiverStream::new(event_receiver);
 
-    let server = Server::new(config, cmd_receiver, event_sender)?;
+    let server = Server::new(config, cmd_receiver)?;
     let client = Client { cmd_sender };
 
-    Ok((client, event_stream, server))
+    Ok((client, server))
 }
 
 impl Client {
@@ -108,27 +107,17 @@ impl Client {
             request,
             responder,
         });
-        receiver.blocking_recv()?
-    }
-
-    /// Send a response to the peer that sent the request.
-    pub fn send_response(&self, request_id: RequestId, response: Result<Vec<u8>, ()>) {
-        let _ = self.cmd_sender.send(Command::SendResponse {
-            request_id,
-            response,
-        });
+        receiver
+            .blocking_recv()?
+            .map_err(|_| Error::RequestRejected)
     }
 
     /// Publish a message to the given topic.
-    pub fn broadcast(&self, topic: Topic, message: Vec<u8>) {
-        let _ = self.cmd_sender.send(Command::Broadcast { topic, message });
-    }
-
-    /// Get status of the node.
-    pub fn get_node_status(&self) -> NodeStatus {
-        let (responder, receiver) = oneshot::channel();
-        let _ = self.cmd_sender.send(Command::GetStatus(responder));
-        receiver.blocking_recv().unwrap_or_default()
+    pub fn broadcast(&self, topic: impl Into<String>, message: Vec<u8>) {
+        let _ = self.cmd_sender.send(Command::Broadcast {
+            topic: topic.into(),
+            message,
+        });
     }
 
     /// Get known peers of the node.
@@ -139,6 +128,13 @@ impl Client {
             .map(|id| id.to_base58())
             .collect()
     }
+
+    /// Get status of the node for debugging.
+    pub fn get_node_status(&self) -> NodeStatus {
+        let (responder, receiver) = oneshot::channel();
+        let _ = self.cmd_sender.send(Command::GetStatus(responder));
+        receiver.blocking_recv().unwrap_or_default()
+    }
 }
 
 /// The commands sent by the `Client` to the `Server`.
@@ -146,170 +142,234 @@ pub enum Command {
     SendRequest {
         target: PeerId,
         request: Vec<u8>,
-        responder: oneshot::Sender<Result<Vec<u8>, Error>>,
-    },
-    SendResponse {
-        request_id: RequestId,
-        response: Result<Vec<u8>, ()>,
+        responder: oneshot::Sender<ResponseType>,
     },
     Broadcast {
-        topic: Topic,
+        topic: String,
         message: Vec<u8>,
     },
     GetStatus(oneshot::Sender<NodeStatus>),
 }
 
-/// The node status, for debugging.
-#[derive(Clone, Debug, Default)]
-pub struct NodeStatus {
-    pub local_peer_id: String,
-    pub listened_addresses: Vec<Multiaddr>,
-    pub known_peers_count: usize,
-    pub known_peers: HashMap<PeerId, Vec<Multiaddr>>,
-}
-
 impl Server {
     /// Create a new `Server`.
-    pub fn new(
-        config: P2pConfig,
-        cmd_receiver: UnboundedReceiver<Command>,
-        event_sender: UnboundedSender<OutEvent>,
-    ) -> Result<Self, Error> {
+    pub fn new(config: P2pConfig, cmd_receiver: UnboundedReceiver<Command>) -> Result<Self, Error> {
         let addr = config.addr.parse()?;
         let local_key = config.gen_keypair()?;
         let local_peer_id = local_key.public().to_peer_id();
         info!("📣 Local peer id: {local_peer_id:?}");
 
+        let pubsub_topics = config.pubsub_topics;
         // Build the [swarm](https://docs.rs/libp2p/latest/libp2p/struct.Swarm.html)
         let mut swarm = {
             let transport = transport::build_transport(local_key.clone());
-            let behaviour = Behaviour::new(local_key, config.req_resp)?;
+            let behaviour = Behaviour::new(local_key, pubsub_topics.clone(), config.req_resp)?;
             SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id.clone()).build()
         };
-
-        // Tell the swarm to listen on all interfaces and a random, OS-assigned port.
         swarm.listen_on(addr)?;
 
-        // Connect to boot node if specified.
+        // Connect to the boot node if specified.
         if let Some(boot_node) = config.boot_node {
             swarm.dial(boot_node.address())?;
         }
 
+        // Create a ticker to periodically discover new peers.
+        let interval_secs = config.discovery_interval.unwrap_or(30);
+        let instant = time::Instant::now() + Duration::from_secs(5);
+        let discovery_ticker = time::interval_at(instant, Duration::from_secs(interval_secs));
+
         Ok(Self {
+            network_service: swarm,
             local_peer_id,
             listened_addresses: Vec::new(),
-            network_service: swarm,
             cmd_receiver,
-            event_sender,
+            event_handler: OnceCell::new(),
+            discovery_ticker,
+            pending_outbound_requests: HashMap::new(),
+            pubsub_topics,
         })
+    }
+
+    /// Set the handler of events from remote peers.
+    pub fn set_event_handler(&mut self, handler: impl EventHandler) {
+        self.event_handler.set(Box::new(handler)).unwrap();
     }
 
     /// Run the `Server`.
     pub async fn run(mut self) {
         loop {
-            self.next_action().await;
+            select! {
+                // Next discovery process.
+                _ = self.discovery_ticker.tick() => {
+                    self.network_service.behaviour_mut().discover_peers();
+                },
+
+                // Next command from the `Client`.
+                msg = self.cmd_receiver.recv() => {
+                    if let Some(cmd) = msg {
+                        self.handle_command(cmd);
+                    }
+                },
+                // Next event from `Swarm`.
+                event = self.network_service.select_next_some() => {
+                    self.handle_swarm_event(event);
+                },
+            }
         }
     }
 
-    async fn next_action(&mut self) {
-        select! {
-            // Next command from the `Client`.
-            msg = self.cmd_receiver.recv() => {
-                if let Some(cmd) = msg {
-                    self.handle_command(cmd);
-                }
-            },
-            // Next event from `Swarm` (the stream guaranteed to never terminate).
-            event = self.network_service.select_next_some() => {
-                self.handle_swarm_event(event);
-            },
-        }
-    }
-
-    /// Process the next command coming from `Client`.
+    // Process the next command coming from `Client`.
     fn handle_command(&mut self, cmd: Command) {
         match cmd {
             Command::SendRequest {
                 target,
                 request,
                 responder,
-            } => {
-                self.network_service
-                    .behaviour_mut()
-                    .send_request(&target, request, responder);
-            }
-            Command::SendResponse {
-                request_id,
-                response,
-            } => {
-                self.network_service
-                    .behaviour_mut()
-                    .send_response(request_id, response);
-            }
-            Command::Broadcast { topic, message } => {
-                let _ = self
-                    .network_service
-                    .behaviour_mut()
-                    .broadcast(topic, message);
-            }
-            Command::GetStatus(responder) => {
-                let _ = responder.send(self.get_status());
-            }
+            } => self.handle_outbound_request(target, request, responder),
+            Command::Broadcast { topic, message } => self.handle_outbound_broadcast(topic, message),
+            Command::GetStatus(responder) => responder.send(self.get_status()).unwrap(),
         }
     }
 
-    /// Process the next event coming from `Swarm`.
+    // Process the next event coming from `Swarm`.
     fn handle_swarm_event(&mut self, event: SwarmEvent<BehaviourEvent, BehaviourErr>) {
-        match event {
+        let behaviour_ev = match event {
+            SwarmEvent::Behaviour(ev) => ev,
+
             SwarmEvent::NewListenAddr { address, .. } => {
                 info!("📣 P2P node listening on {:?}", address);
-                self.update_listened_addresses()
+                return self.update_listened_addresses();
             }
 
             SwarmEvent::ListenerClosed {
                 reason, addresses, ..
-            } => Self::log_listener_close(reason, addresses),
+            } => return Self::log_listener_close(reason, addresses),
 
+            // Can't connect to the `peer`, remove it from the DHT.
             SwarmEvent::OutgoingConnectionError {
                 peer_id: Some(peer),
                 ..
-            } => self.network_service.behaviour_mut().remove_peer(&peer),
+            } => return self.network_service.behaviour_mut().remove_peer(&peer),
 
-            SwarmEvent::Behaviour(BehaviourEvent::Identify(identify::Event::Received {
+            _ => return,
+        };
+
+        self.handle_behaviour_event(behaviour_ev);
+    }
+
+    fn handle_behaviour_event(&mut self, ev: BehaviourEvent) {
+        match ev {
+            // See https://docs.rs/libp2p/latest/libp2p/kad/index.html#important-discrepancies
+            BehaviourEvent::Identify(identify::Event::Received {
                 peer_id,
                 info: identify::Info { listen_addrs, .. },
-            })) => self.add_addresses(&peer_id, listen_addrs),
+            }) => self.add_addresses(&peer_id, listen_addrs),
 
-            SwarmEvent::Behaviour(BehaviourEvent::Ping(ping::Event {
+            // The remote peer is unreachable, remove it from the DHT.
+            BehaviourEvent::Ping(ping::Event {
                 peer,
                 result: Err(_),
-            })) => self.network_service.behaviour_mut().remove_peer(&peer),
+                ..
+            }) => self.network_service.behaviour_mut().remove_peer(&peer),
 
-            SwarmEvent::Behaviour(BehaviourEvent::ReqResp(req_resp::Event::InboundRequest {
+            BehaviourEvent::ReqResp(request_response::Event::Message {
+                message:
+                    request_response::Message::Request {
+                        request, channel, ..
+                    },
+                ..
+            }) => self.handle_inbound_request(request, channel),
+
+            BehaviourEvent::ReqResp(request_response::Event::Message {
+                message:
+                    request_response::Message::Response {
+                        request_id,
+                        response,
+                    },
+                ..
+            }) => self.handle_inbound_response(request_id, response),
+
+            BehaviourEvent::ReqResp(request_response::Event::OutboundFailure {
                 request_id,
-                payload,
-            })) => {
-                let _ = self.event_sender.send(OutEvent::InboundRequest {
-                    request_id,
-                    payload,
-                });
-            }
+                error,
+                ..
+            }) => self.handle_outbound_failure(request_id, error),
 
-            SwarmEvent::Behaviour(BehaviourEvent::Gossipsub(gossipsub::Event::Message {
-                propagation_source: source,
+            BehaviourEvent::Pubsub(gossipsub::Event::Message {
+                propagation_source: _,
                 message_id: _,
                 message,
-            })) => {
-                let _ = self.event_sender.send(OutEvent::Broadcast {
-                    source,
-                    topic: message.topic.into(),
-                    message: message.data,
-                });
-            }
+            }) => self.handle_inbound_broadcast(message),
 
-            // Ignore other events
             _ => {}
         }
+    }
+
+    // Inbound requests are handled by the `EventHandler` which is provided by the application layer.
+    fn handle_inbound_request(&mut self, request: Vec<u8>, ch: ResponseChannel<ResponseType>) {
+        if let Some(handler) = self.event_handler.get() {
+            let response = handler.handle_inbound_request(request);
+            self.network_service
+                .behaviour_mut()
+                .send_response(ch, response);
+        }
+    }
+
+    // Store the request_id with the responder so that we can send the response later.
+    fn handle_outbound_request(
+        &mut self,
+        target: PeerId,
+        request: Vec<u8>,
+        responder: oneshot::Sender<ResponseType>,
+    ) {
+        let req_id = self
+            .network_service
+            .behaviour_mut()
+            .send_request(&target, request);
+        self.pending_outbound_requests.insert(req_id, responder);
+    }
+
+    // An outbound request failed, notify the application layer.
+    fn handle_outbound_failure(&mut self, request_id: RequestId, error: OutboundFailure) {
+        if let Some(responder) = self.pending_outbound_requests.remove(&request_id) {
+            error!("❌ Outbound request failed: {:?}", error);
+            let _ = responder.send(Err(()));
+        } else {
+            warn!("❗ Received failure for unknown request: {}", request_id);
+            debug_assert!(false);
+        }
+    }
+
+    // An inbound response was received, notify the application layer.
+    fn handle_inbound_response(&mut self, request_id: RequestId, response: ResponseType) {
+        if let Some(responder) = self.pending_outbound_requests.remove(&request_id) {
+            let _ = responder.send(response);
+        } else {
+            warn!("❗ Received response for unknown request: {}", request_id);
+            debug_assert!(false);
+        }
+    }
+
+    // Inbound broadcasts are handled by the `EventHandler` which is provided by the application layer.
+    fn handle_inbound_broadcast(&mut self, message: gossipsub::Message) {
+        if let Some(handler) = self.event_handler.get() {
+            let topic_hash = message.topic;
+            match self.get_topic(&topic_hash) {
+                Some(topic) => handler.handle_broadcast(&topic, message.data),
+                None => {
+                    warn!("❗ Received broadcast for unknown topic: {:?}", topic_hash);
+                    debug_assert!(false);
+                }
+            }
+        }
+    }
+
+    // Broadcast a message to all peers subscribed to the given topic.
+    fn handle_outbound_broadcast(&mut self, topic: String, message: Vec<u8>) {
+        let _ = self
+            .network_service
+            .behaviour_mut()
+            .broadcast(topic, message);
     }
 
     fn add_addresses(&mut self, peer_id: &PeerId, addresses: Vec<Multiaddr>) {
@@ -338,6 +398,18 @@ impl Server {
             .collect();
     }
 
+    /// Returns the topic name for the given topic hash.
+    fn get_topic(&self, topic_hash: &TopicHash) -> Option<String> {
+        for t in &self.pubsub_topics {
+            let topic = gossipsub::IdentTopic::new(t);
+            if topic.hash() == *topic_hash {
+                return Some(t.clone());
+            }
+        }
+
+        None
+    }
+
     fn log_listener_close(reason: io::Result<()>, addresses: Vec<Multiaddr>) {
         let addrs = addresses
             .into_iter()
@@ -353,6 +425,15 @@ impl Server {
             }
         }
     }
+}
+
+/// The node status, for debugging.
+#[derive(Clone, Debug, Default)]
+pub struct NodeStatus {
+    pub local_peer_id: String,
+    pub listened_addresses: Vec<Multiaddr>,
+    pub known_peers_count: usize,
+    pub known_peers: HashMap<PeerId, Vec<Multiaddr>>,
 }
 
 #[cfg(test)]

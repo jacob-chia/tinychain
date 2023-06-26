@@ -1,20 +1,21 @@
 use std::{thread, time::Duration};
 
 use log::info;
-use tinyp2p::{config::P2pConfig, Client, OutEvent, Topic};
+use tinyp2p::{config::P2pConfig, Client, EventHandler};
 use tokio::task;
-use tokio_stream::{Stream, StreamExt};
 
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
 
     let mut config = P2pConfig::default();
+    config.pubsub_topics = vec!["block".to_string(), "tx".to_string()];
     if let Some(addr) = std::env::args().nth(1) {
         config.boot_node = addr.parse().ok();
     }
 
-    let (client, event_stream, server) = tinyp2p::new(config).unwrap();
+    let (client, mut server) = tinyp2p::new(config).unwrap();
+    server.set_event_handler(Handler);
 
     // Run the p2p server
     task::spawn(server.run());
@@ -30,9 +31,27 @@ async fn main() {
     // Periodically make a broadcast to the network.
     let client_clone = client.clone();
     thread::spawn(move || broadcast(client_clone));
+}
 
-    // Handle events from the p2p server.
-    event_loop(event_stream, client).await;
+#[derive(Debug)]
+struct Handler;
+
+impl EventHandler for Handler {
+    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, ()> {
+        info!(
+            "📣 <<<< Inbound request: {:?}",
+            String::from_utf8_lossy(request.as_slice())
+        );
+        Ok(request)
+    }
+
+    fn handle_broadcast(&self, topic: &str, message: Vec<u8>) {
+        info!(
+            "📣 <<<< Inbound broadcast: {:?} {:?}",
+            topic,
+            String::from_utf8_lossy(message.as_slice())
+        );
+    }
 }
 
 fn get_node_status(client: Client) {
@@ -68,42 +87,9 @@ fn broadcast(client: Client) {
     let dur = Duration::from_secs(13);
     loop {
         thread::sleep(dur);
-        let topic = Topic::Block;
+        let topic = "block";
         let message = "Hello, a new block!";
         info!("📣 >>>> Outbound broadcast: {:?} {:?}", topic, message);
         let _ = client.broadcast(topic, message.as_bytes().to_vec());
-    }
-}
-
-async fn event_loop(mut event_stream: impl Stream<Item = OutEvent> + Unpin, client: Client) {
-    loop {
-        match event_stream.next().await {
-            Some(OutEvent::InboundRequest {
-                request_id,
-                payload,
-            }) => {
-                info!(
-                    "📣 <<<< Inbound request: {:?}",
-                    String::from_utf8_lossy(&payload)
-                );
-                let response = "Hello, response!";
-                info!("📣 >>>> Outbound response: {:?}", response);
-
-                client.send_response(request_id, Ok(response.as_bytes().to_vec()));
-            }
-            Some(OutEvent::Broadcast {
-                source,
-                topic,
-                message,
-            }) => {
-                info!(
-                    "📣 <<<< Inbound broadcast: {:?} {:?} {:?}",
-                    source,
-                    topic,
-                    String::from_utf8_lossy(&message)
-                );
-            }
-            None => continue,
-        }
     }
 }
