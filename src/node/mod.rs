@@ -1,4 +1,4 @@
-//! The core logic of the blockchain node.
+//! The entry point of the blockchain node.
 
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
