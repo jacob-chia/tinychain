@@ -10,8 +10,8 @@ use sled::{
 };
 
 use crate::{
+    biz::State,
     error::Error,
-    node::State,
     schema::{Block, SignedTx},
     types::Hash,
     utils,

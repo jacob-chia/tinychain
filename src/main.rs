@@ -8,18 +8,18 @@ use log::info;
 use tokio::task;
 use wallet::{self, Wallet};
 
+mod biz;
 mod config;
+mod data;
 mod error;
 mod network;
-mod node;
 mod schema;
-mod state;
 mod types;
 mod utils;
 
+use biz::{Genesis, Node};
+use data::SledState;
 use network::{http, p2p};
-use node::{Genesis, Node};
-use state::SledState;
 
 const MINING_DIFFICULTY: usize = 2;
 

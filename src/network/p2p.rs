@@ -9,7 +9,7 @@ use std::ops::Deref;
 use log::info;
 use tinyp2p::{config::P2pConfig, Client, Server};
 
-use crate::{error::Error, node::Peer, schema::*, types::Topic};
+use crate::{biz::Peer, error::Error, schema::*, types::Topic};
 
 // Re-export libp2p functions.
 pub use tinyp2p::new_secret_key;

@@ -13,8 +13,8 @@ use log::info;
 use serde_json::json;
 
 use crate::{
+    biz::{Node, Peer, State},
     error::Error,
-    node::{Node, Peer, State},
 };
 
 mod dto;
