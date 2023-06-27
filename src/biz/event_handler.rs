@@ -1,8 +1,7 @@
 use log::{error, info};
 
-use tinyp2p::{Error, EventHandler};
-
 use crate::{
+    network::p2p::{EventHandler, P2pError},
     schema::{request, Block, Method, Request, Response, SignedTx},
     types::Topic,
 };
@@ -10,11 +9,11 @@ use crate::{
 use super::{Node, Peer, State};
 
 impl<S: State, P: Peer> EventHandler for Node<S, P> {
-    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, Error> {
+    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, P2pError> {
         let req = Request::try_from(request);
         if req.is_err() {
             error!("❌ >> [P2P-IN] Invalid request: {:?}", req.err());
-            return Err(Error::RequestRejected);
+            return Err(P2pError::RequestRejected);
         }
         let req = req.unwrap();
 

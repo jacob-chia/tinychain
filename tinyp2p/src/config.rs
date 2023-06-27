@@ -6,7 +6,7 @@ use libp2p::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::error::Error;
+use crate::error::P2pError;
 
 /// P2p Configuration.
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -42,15 +42,15 @@ pub struct ReqRespConfig {
 
 impl P2pConfig {
     /// Generate a keypair from the secret.
-    pub fn gen_keypair(&self) -> Result<Keypair, Error> {
+    pub fn gen_keypair(&self) -> Result<Keypair, P2pError> {
         let secret = match &self.secret {
             Some(secret) => {
                 let decoded = bs58::decode(secret)
                     .into_vec()
-                    .map_err(|err| Error::InvalidSecretKey(err.to_string()))?;
+                    .map_err(|err| P2pError::InvalidSecretKey(err.to_string()))?;
 
                 ed25519::SecretKey::try_from_bytes(decoded)
-                    .map_err(|err| Error::InvalidSecretKey(err.to_string()))?
+                    .map_err(|err| P2pError::InvalidSecretKey(err.to_string()))?
             }
             None => ed25519::SecretKey::generate(),
         };
@@ -96,7 +96,7 @@ impl fmt::Display for PeerIdWithMultiaddr {
 }
 
 impl FromStr for PeerIdWithMultiaddr {
-    type Err = Error;
+    type Err = P2pError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (peer_id, multiaddr) = parse_str_addr(s)?;
@@ -111,21 +111,21 @@ impl From<PeerIdWithMultiaddr> for String {
 }
 
 impl TryFrom<String> for PeerIdWithMultiaddr {
-    type Error = Error;
+    type Error = P2pError;
 
     fn try_from(string: String) -> Result<Self, Self::Error> {
         string.parse()
     }
 }
 
-fn parse_str_addr(addr_str: &str) -> Result<(PeerId, Multiaddr), Error> {
+fn parse_str_addr(addr_str: &str) -> Result<(PeerId, Multiaddr), P2pError> {
     let mut addr: Multiaddr = addr_str.parse()?;
 
     let peer_id = match addr.pop() {
         Some(multiaddr::Protocol::P2p(key)) => {
-            PeerId::from_multihash(key).map_err(|_| Error::InvalidPeerId)?
+            PeerId::from_multihash(key).map_err(|_| P2pError::InvalidPeerId)?
         }
-        _ => return Err(Error::InvalidPeerId),
+        _ => return Err(P2pError::InvalidPeerId),
     };
 
     Ok((peer_id, addr))

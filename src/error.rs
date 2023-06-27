@@ -38,5 +38,5 @@ pub enum Error {
     #[error(transparent)]
     WalletFailure(#[from] wallet::WalletError),
     #[error(transparent)]
-    P2pFailure(#[from] tinyp2p::Error),
+    P2pFailure(#[from] tinyp2p::P2pError),
 }

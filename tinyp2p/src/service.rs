@@ -45,10 +45,10 @@ use tokio::{
     time::{self, Interval},
 };
 
-use crate::{behaviour::*, config::P2pConfig, error::Error, transport};
+use crate::{behaviour::*, config::P2pConfig, error::P2pError, transport};
 
 pub trait EventHandler: Debug + Send + 'static {
-    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, Error>;
+    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, P2pError>;
 
     fn handle_broadcast(&self, topic: &str, message: Vec<u8>);
 }
@@ -87,7 +87,7 @@ pub fn new_secret_key() -> String {
 }
 
 /// Create a new p2p node, which consists of a `Client` and a `Server`.
-pub fn new(config: P2pConfig) -> Result<(Client, Server), Error> {
+pub fn new(config: P2pConfig) -> Result<(Client, Server), P2pError> {
     let (cmd_sender, cmd_receiver) = mpsc::unbounded_channel();
 
     let server = Server::new(config, cmd_receiver)?;
@@ -98,8 +98,8 @@ pub fn new(config: P2pConfig) -> Result<(Client, Server), Error> {
 
 impl Client {
     /// Send a blocking request to the `target` peer.
-    pub fn blocking_request(&self, target: &str, request: Vec<u8>) -> Result<Vec<u8>, Error> {
-        let target = target.parse().map_err(|_| Error::InvalidPeerId)?;
+    pub fn blocking_request(&self, target: &str, request: Vec<u8>) -> Result<Vec<u8>, P2pError> {
+        let target = target.parse().map_err(|_| P2pError::InvalidPeerId)?;
 
         let (responder, receiver) = oneshot::channel();
         let _ = self.cmd_sender.send(Command::SendRequest {
@@ -109,7 +109,7 @@ impl Client {
         });
         receiver
             .blocking_recv()?
-            .map_err(|_| Error::RequestRejected)
+            .map_err(|_| P2pError::RequestRejected)
     }
 
     /// Publish a message to the given topic.
@@ -153,7 +153,10 @@ pub enum Command {
 
 impl Server {
     /// Create a new `Server`.
-    pub fn new(config: P2pConfig, cmd_receiver: UnboundedReceiver<Command>) -> Result<Self, Error> {
+    pub fn new(
+        config: P2pConfig,
+        cmd_receiver: UnboundedReceiver<Command>,
+    ) -> Result<Self, P2pError> {
         let addr = config.addr.parse()?;
         let local_key = config.gen_keypair()?;
         let local_peer_id = local_key.public().to_peer_id();

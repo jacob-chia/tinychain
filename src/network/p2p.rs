@@ -12,7 +12,7 @@ use tinyp2p::{config::P2pConfig, Client, Server};
 use crate::{biz::Peer, error::Error, schema::*, types::Topic};
 
 // Re-export libp2p functions.
-pub use tinyp2p::new_secret_key;
+pub use tinyp2p::{new_secret_key, EventHandler, P2pError};
 
 /// Creates a new p2p client, event loop, and server.
 pub fn new(config: P2pConfig) -> Result<(P2pClient, Server), Error> {

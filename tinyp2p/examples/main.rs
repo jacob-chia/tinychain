@@ -37,7 +37,7 @@ async fn main() {
 struct Handler;
 
 impl EventHandler for Handler {
-    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, tinyp2p::Error> {
+    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, tinyp2p::P2pError> {
         info!(
             "📣 <<<< Inbound request: {:?}",
             String::from_utf8_lossy(request.as_slice())

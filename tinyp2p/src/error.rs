@@ -4,7 +4,7 @@ use libp2p::{gossipsub, multiaddr, swarm, TransportError};
 use tokio::sync::oneshot;
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum P2pError {
     #[error("Invalid secret key: {0}")]
     InvalidSecretKey(String),
     #[error("Invalid address")]

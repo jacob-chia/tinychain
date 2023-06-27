@@ -10,7 +10,7 @@ mod service;
 mod transport;
 
 pub use config::*;
-pub use error::Error;
+pub use error::P2pError;
 pub use service::{new, new_secret_key, Client, EventHandler, Server};
 
 // Re-export libp2p types.

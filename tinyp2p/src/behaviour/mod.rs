@@ -20,7 +20,7 @@ use libp2p::{
 };
 use log::debug;
 
-use crate::{config::ReqRespConfig, error::Error};
+use crate::{config::ReqRespConfig, error::P2pError};
 
 mod req_resp;
 
@@ -55,7 +55,7 @@ impl Behaviour {
         local_key: Keypair,
         pubsub_topics: Vec<String>,
         req_resp_config: Option<ReqRespConfig>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, P2pError> {
         let local_pubkey = local_key.public();
         let local_id = local_pubkey.to_peer_id();
 
@@ -103,7 +103,7 @@ impl Behaviour {
         let _ = self.req_resp.send_response(ch, response);
     }
 
-    pub fn broadcast(&mut self, topic: String, message: Vec<u8>) -> Result<(), Error> {
+    pub fn broadcast(&mut self, topic: String, message: Vec<u8>) -> Result<(), P2pError> {
         let topic = gossipsub::IdentTopic::new(topic);
         self.pubsub.publish(topic, message)?;
 
@@ -136,7 +136,7 @@ impl Behaviour {
     fn new_gossipsub(
         local_key: Keypair,
         topics: Vec<String>,
-    ) -> Result<gossipsub::Behaviour, Error> {
+    ) -> Result<gossipsub::Behaviour, P2pError> {
         let message_id_fn = |message: &gossipsub::Message| {
             let mut s = DefaultHasher::new();
             message.data.hash(&mut s);
@@ -148,13 +148,13 @@ impl Behaviour {
             .validation_mode(gossipsub::ValidationMode::Strict)
             .message_id_fn(message_id_fn)
             .build()
-            .map_err(|err| Error::PubsubBuildError(err.to_string()))?;
+            .map_err(|err| P2pError::PubsubBuildError(err.to_string()))?;
 
         let mut gossipsub = gossipsub::Behaviour::new(
             gossipsub::MessageAuthenticity::Signed(local_key),
             gossipsub_config,
         )
-        .map_err(|err| Error::PubsubBuildError(err.to_string()))?;
+        .map_err(|err| P2pError::PubsubBuildError(err.to_string()))?;
 
         for t in topics {
             let topic = IdentTopic::new(t);
