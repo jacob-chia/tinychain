@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Debug};
 use super::Block;
 use crate::{error::Error, types::Hash};
 
-/// State is a trait that defines the interface for a state machine.
+/// State is a trait that defines the behaviour of a state.
 pub trait State: Debug + Clone + Send + Sync + 'static {
     /// Current block height.
     fn block_height(&self) -> u64;
