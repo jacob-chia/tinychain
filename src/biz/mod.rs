@@ -8,7 +8,6 @@ use wallet::Wallet;
 
 use crate::{error::Error, schema::*, types::Hash, utils};
 
-mod event_handler;
 mod genesis;
 mod miner;
 mod peer;

@@ -6,13 +6,18 @@
 
 use std::ops::Deref;
 
-use log::info;
-use tinyp2p::{config::P2pConfig, Client, Server};
+use log::{error, info};
+use tinyp2p::{config::P2pConfig, Client, EventHandler, P2pError, Server};
 
-use crate::{biz::Peer, error::Error, schema::*, types::Topic};
+use crate::{
+    biz::{Node, Peer, State},
+    error::Error,
+    schema::*,
+    types::Topic,
+};
 
 // Re-export libp2p functions.
-pub use tinyp2p::{new_secret_key, EventHandler, P2pError};
+pub use tinyp2p::new_secret_key;
 
 /// Creates a new p2p client, event loop, and server.
 pub fn new(config: P2pConfig) -> Result<(P2pClient, Server), Error> {
@@ -77,5 +82,72 @@ impl Peer for P2pClient {
     fn broadcast_block(&self, block: Block) {
         info!("📣 >> [OUT-BROADCAST] block: {}", block);
         self.broadcast(Topic::Block, Vec::from(&block));
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct EventHandlerImpl<S: State>(Node<S, P2pClient>);
+
+impl<S: State> EventHandlerImpl<S> {
+    pub fn new(node: Node<S, P2pClient>) -> Self {
+        Self(node)
+    }
+}
+
+impl<S: State> Deref for EventHandlerImpl<S> {
+    type Target = Node<S, P2pClient>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<S: State> EventHandler for EventHandlerImpl<S> {
+    fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, P2pError> {
+        let req = Request::try_from(request);
+        if req.is_err() {
+            error!("❌ >> [P2P-IN] Invalid request: {:?}", req.err());
+            return Err(P2pError::RequestRejected);
+        }
+        let req = req.unwrap();
+
+        info!("📣 >> [P2P-IN] {:?}", req);
+        let resp = match req.method() {
+            Method::Height => {
+                let block_height = self.block_height();
+                Response::new_block_height_resp(block_height)
+            }
+            Method::Blocks => {
+                let blocks = match req.body.unwrap() {
+                    request::Body::BlocksReq(req) => self.get_blocks(req.from_number),
+                    _ => vec![],
+                };
+                Response::new_blocks_resp(blocks)
+            }
+        };
+        info!("📣 << [P2P-OUT] {:?}", resp);
+
+        Ok(resp.into())
+    }
+
+    fn handle_broadcast(&self, topic: &str, message: Vec<u8>) {
+        match Topic::from(topic) {
+            Topic::Block => {
+                if let Ok(block) = Block::try_from(message) {
+                    info!("📣 >> [P2P-IN-BROADCAST] {}", block);
+                    self.add_block_stop_mining(block);
+                } else {
+                    error!("❌ >> [P2P-IN-BROADCAST] Invalid block");
+                }
+            }
+            Topic::Tx => {
+                if let Ok(tx) = SignedTx::try_from(message) {
+                    info!("📣 >> [P2P-IN-BROADCAST] {}", tx);
+                    let _ = self.add_pending_tx(tx);
+                } else {
+                    error!("❌ >> [P2P-IN-BROADCAST] Invalid tx");
+                }
+            }
+        }
     }
 }

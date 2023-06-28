@@ -102,7 +102,8 @@ async fn run(config_file: &str) {
         MINING_DIFFICULTY,
     )
     .unwrap();
-    p2p_server.set_event_handler(node.clone());
+    let event_handler = p2p::EventHandlerImpl::new(node.clone());
+    p2p_server.set_event_handler(event_handler);
 
     let miner = node.clone();
     let syncer = node.clone();
