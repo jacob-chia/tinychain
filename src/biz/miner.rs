@@ -12,7 +12,7 @@ use crate::utils;
 
 const MINE_INTERVAL: u64 = 11;
 
-impl<S: State, P: Peer> NodeInner<S, P> {
+impl<S: State, P: PeerClient> NodeInner<S, P> {
     pub fn mine(&self, cancel_signal_r: Receiver<()>) {
         let ticker = tick(Duration::from_secs(MINE_INTERVAL));
 
@@ -33,7 +33,7 @@ impl<S: State, P: Peer> NodeInner<S, P> {
 
                     if let Some(block) = self.pow(block, cancel_signal_r.clone()) {
                         if self.add_block(block.clone()).is_ok() {
-                            self.peer_proxy.broadcast_block(block)
+                            self.peer_client.broadcast_block(block)
                         }
                     }
                 },

@@ -13,7 +13,7 @@ use log::info;
 use serde_json::json;
 
 use crate::{
-    biz::{Node, Peer, State},
+    biz::{Node, PeerClient, State},
     error::Error,
 };
 
@@ -21,7 +21,7 @@ mod dto;
 
 pub use dto::*;
 
-pub async fn run<S: State, P: Peer>(addr: SocketAddr, node: Node<S, P>) {
+pub async fn run<S: State, P: PeerClient>(addr: SocketAddr, node: Node<S, P>) {
     let router = new_router(node);
 
     info!("📣 HTTP server listening on {addr}");
@@ -31,7 +31,7 @@ pub async fn run<S: State, P: Peer>(addr: SocketAddr, node: Node<S, P>) {
         .expect("Failed to run http server");
 }
 
-pub fn new_router<S: State, P: Peer>(node: Node<S, P>) -> Router {
+pub fn new_router<S: State, P: PeerClient>(node: Node<S, P>) -> Router {
     Router::new()
         .route("/blocks", get(get_blocks::<S, P>))
         .route("/blocks/:number", get(get_block::<S, P>))
@@ -42,7 +42,7 @@ pub fn new_router<S: State, P: Peer>(node: Node<S, P>) -> Router {
         .layer(Extension(node))
 }
 
-async fn get_blocks<S: State, P: Peer>(
+async fn get_blocks<S: State, P: PeerClient>(
     Extension(node): Extension<Node<S, P>>,
     Query(params): Query<GetBlocksReq>,
 ) -> impl IntoResponse {
@@ -57,7 +57,7 @@ async fn get_blocks<S: State, P: Peer>(
     Json(blocks)
 }
 
-async fn get_block<S: State, P: Peer>(
+async fn get_block<S: State, P: PeerClient>(
     Extension(node): Extension<Node<S, P>>,
     Path(number): Path<u64>,
 ) -> impl IntoResponse {
@@ -68,7 +68,7 @@ async fn get_block<S: State, P: Peer>(
     Json(block)
 }
 
-async fn get_balances<S: State, P: Peer>(
+async fn get_balances<S: State, P: PeerClient>(
     Extension(node): Extension<Node<S, P>>,
 ) -> impl IntoResponse {
     info!("📣 >> get_balances");
@@ -81,7 +81,7 @@ async fn get_balances<S: State, P: Peer>(
     Json(resp)
 }
 
-async fn next_account_nonce<S: State, P: Peer>(
+async fn next_account_nonce<S: State, P: PeerClient>(
     Extension(node): Extension<Node<S, P>>,
     Query(params): Query<NonceReq>,
 ) -> impl IntoResponse {
@@ -92,7 +92,7 @@ async fn next_account_nonce<S: State, P: Peer>(
     Json(resp)
 }
 
-async fn transfer<S: State, P: Peer>(
+async fn transfer<S: State, P: PeerClient>(
     Extension(node): Extension<Node<S, P>>,
     Json(tx): Json<TxReq>,
 ) -> Result<impl IntoResponse, HttpError> {

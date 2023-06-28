@@ -10,25 +10,25 @@ use crate::{error::Error, schema::*, types::Hash, utils};
 
 mod genesis;
 mod miner;
-mod peer;
+mod peer_client;
 mod state;
 mod syncer;
 
 pub use genesis::*;
-pub use peer::*;
+pub use peer_client::*;
 pub use state::*;
 
 #[derive(Debug, Clone)]
-pub struct Node<S: State, P: Peer> {
+pub struct Node<S: State, P: PeerClient> {
     inner: Arc<NodeInner<S, P>>,
 }
 
-impl<S: State, P: Peer> Node<S, P> {
+impl<S: State, P: PeerClient> Node<S, P> {
     /// Create a new node with the given miner address and state.
     pub fn new(
         author: String,
         state: S,
-        peer: P,
+        peer_client: P,
         wallet: Wallet,
         cancel_signal_s: Sender<()>,
         mining_difficulty: usize,
@@ -38,7 +38,7 @@ impl<S: State, P: Peer> Node<S, P> {
             pending_txs: DashMap::new(),
             mining_difficulty,
             state,
-            peer_proxy: peer,
+            peer_client,
             wallet,
             cancel_signal_s,
         };
@@ -50,7 +50,7 @@ impl<S: State, P: Peer> Node<S, P> {
 }
 
 // Implement `Deref` so that `Node` can be treated as `NodeInner`.
-impl<S: State, P: Peer> Deref for Node<S, P> {
+impl<S: State, P: PeerClient> Deref for Node<S, P> {
     type Target = NodeInner<S, P>;
 
     fn deref(&self) -> &Self::Target {
@@ -59,7 +59,7 @@ impl<S: State, P: Peer> Deref for Node<S, P> {
 }
 
 #[derive(Debug)]
-pub struct NodeInner<S: State, P: Peer> {
+pub struct NodeInner<S: State, P: PeerClient> {
     /// The author account of the node.
     author: String,
     /// The pending transactions that are not yet included in a block.
@@ -69,8 +69,8 @@ pub struct NodeInner<S: State, P: Peer> {
 
     // A state machine that holds the state of the blockchain.
     state: S,
-    // A proxy to interact with peers, which is initialized after the node is created.
-    peer_proxy: P,
+    // A client to interact with other peers.
+    peer_client: P,
 
     // For facilitating a smooth demonstration, the node holds a wallet that stores all
     // the keys of the users, so that it can sign transactions on behalf of the users.
@@ -81,7 +81,7 @@ pub struct NodeInner<S: State, P: Peer> {
     cancel_signal_s: Sender<()>,
 }
 
-impl<S: State, P: Peer> NodeInner<S, P> {
+impl<S: State, P: PeerClient> NodeInner<S, P> {
     /// Get the next nouce of the given account.
     /// The nounce is a monotonically increasing number that is used to prevent replay attacks.
     pub fn next_account_nonce(&self, account: &str) -> u64 {
@@ -99,7 +99,7 @@ impl<S: State, P: Peer> NodeInner<S, P> {
         let signed_tx = self.sign_tx(tx)?;
 
         self.add_pending_tx(signed_tx.clone())?;
-        self.peer_proxy.broadcast_tx(signed_tx);
+        self.peer_client.broadcast_tx(signed_tx);
         Ok(())
     }
 

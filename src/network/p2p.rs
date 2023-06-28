@@ -10,7 +10,7 @@ use log::{error, info};
 use tinyp2p::{config::P2pConfig, Client, EventHandler, P2pError, Server};
 
 use crate::{
-    biz::{Node, Peer, State},
+    biz::{Node, PeerClient, State},
     error::Error,
     schema::*,
     types::Topic,
@@ -46,7 +46,7 @@ impl Deref for P2pClient {
     }
 }
 
-impl Peer for P2pClient {
+impl PeerClient for P2pClient {
     fn known_peers(&self) -> Vec<String> {
         let peers = self.get_known_peers();
         // Getting self known peers doesn't involve any network calls,
