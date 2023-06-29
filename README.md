@@ -4,7 +4,7 @@
 
 - [前言](README.md)
 - [01 | 架构设计：谋定而后动](doc/01-architecture.md)
-- [02 | 项目初始化：Pre-commit hooks 与 CI/CD](doc/02-init-project.md)
+- [02 | 项目初始化：Pre-commit Hooks 与 Github Action](doc/02-init-project.md)
 - [03 | 定义数据结构与接口](doc/03-data-structure-api.md)
 - [04 | 钱包: 签名与验签](doc/04-wallet.md)
 - [05 | 读取命令行与配置文件](doc/05-cmd-config.md)
