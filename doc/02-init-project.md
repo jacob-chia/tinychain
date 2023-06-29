@@ -6,14 +6,14 @@
 
 # 02 | 项目初始化：Pre-commit Hooks 与 Github Action
 
-> 本文为实战课，需要切换到对应的代码分支，遇到不熟悉的概念可随时暂停查看官方文档。
+> 本文为实战课，需要切换到对应的代码分支，并配合下方的参考文档一起学习。
 >
-> - 相关代码分支：`git fetch && git switch 02-init-project`
+> - 代码分支：`git fetch && git switch 02-init-project`
 > - [Workspace 官方文档](https://doc.rust-lang.org/cargo/reference/workspaces.html)
 > - [Pre-commit 官方文档](https://pre-commit.com/)
 > - [Github Action 官方文档](https://docs.github.com/en/actions)
 
-在写代码之前，我们需要为项目配置必要的“Guard”，用来确保提交到本地和 Github 的代码满足最基本的要求。
+在写代码之前，我们需要创建一个 workspace，并配置必要的“Guard”，用来确保提交到本地和 Github 的代码满足最基本的要求。
 
 ## 1 创建 workspace
 
