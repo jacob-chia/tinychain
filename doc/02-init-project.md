@@ -13,7 +13,7 @@
 > - [Pre-commit 官方文档](https://pre-commit.com/)
 > - [Github Action 官方文档](https://docs.github.com/en/actions)
 
-在写代码之前，我们需要创建一个 workspace,并配置必要的“Guard”，用来确保提交到本地和 Github 的代码满足最基本的要求。
+在写代码之前，我们需要创建一个 workspace，并配置必要的“Guard”，用来确保提交到本地和 Github 的代码满足最基本的要求。
 
 ## 1 创建 workspace
 
