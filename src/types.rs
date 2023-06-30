@@ -143,7 +143,7 @@ mod tests {
         assert_eq!(&arr[..], &b[..]);
 
         let v: Vec<u8> = b.into();
-        assert_eq!(&v[..], &b[..]);
+        assert_eq!(v.as_slice(), b.as_slice());
 
         let s2: String = b.into();
         assert_eq!(s, s2);

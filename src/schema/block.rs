@@ -6,8 +6,6 @@ use crate::{error::Error, types::Hash, utils};
 
 use super::{Block, BlockHeader, SignedTx};
 
-const BLOCK_REWORD: u64 = 100;
-
 impl Block {
     pub fn new(parent_hash: Hash, number: u64, author: String, txs: Vec<SignedTx>) -> Self {
         Self {
@@ -28,8 +26,7 @@ impl Block {
 
     /// Get the reward which the author will get.
     pub fn block_reward(&self) -> u64 {
-        let gas_reward: u64 = self.txs.iter().map(|tx| tx.gas_cost()).sum();
-        gas_reward + BLOCK_REWORD
+        self.txs.iter().map(|tx| tx.gas_cost()).sum()
     }
 
     /// Update the nonce and timestamp of the block, which is used for mining.
@@ -77,12 +74,15 @@ impl From<&Block> for Vec<u8> {
 // `fmt::Debug` is implemented by prost, we can't implement it manually.
 impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Block {{ header: {}, txs: {:?} }}",
-            self.header.as_ref().unwrap(),
-            self.txs,
-        )
+        let header = self.header.as_ref().unwrap();
+        write!(f, "Block {{ header: {}, txs: [", header)?;
+        for i in 0..self.txs.len() {
+            write!(f, "{}", self.txs[i])?;
+            if i != self.txs.len() - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, "] }}")
     }
 }
 
@@ -92,7 +92,7 @@ impl fmt::Display for BlockHeader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "BlockHeader {{ number: {}, parent_hash: {}, nonce: {}, timestamp: {}, author: {} }}",
+            "BlockHeader {{ number: {}, parent_hash: {}, nonce: {}, timestamp: {}, author: \"{}\" }}",
             self.number,
             Hash::from(self.parent_hash.clone()),
             self.nonce,
@@ -113,7 +113,7 @@ mod tests {
         let tx = Tx::new("0x00000000", "0x11111111", 100, 100);
         let signed_tx = SignedTx {
             tx: Some(tx),
-            sig: vec![0; 65],
+            sig: vec![0u8; 65],
         };
 
         let mut block = Block::new(
@@ -126,7 +126,7 @@ mod tests {
         assert_eq!(block.number(), 1);
         assert_eq!(block.author(), "0x01234567");
         assert_eq!(block.txs.len(), 1);
-        assert_eq!(block.block_reward(), 121);
+        assert_eq!(block.block_reward(), 21);
         assert_eq!(block.parent_hash(), Hash::default());
 
         let old_nonce = block.nonce();

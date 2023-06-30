@@ -2,7 +2,11 @@ use std::{fmt, ops::Deref};
 
 use prost::Message;
 
-use crate::{error::Error, types::Hash, utils};
+use crate::{
+    error::Error,
+    types::{Hash, Signature},
+    utils,
+};
 
 use super::{SignedTx, Tx};
 
@@ -77,7 +81,7 @@ impl fmt::Display for SignedTx {
             f,
             "SignedTx{{ tx: {:?}, sig: {:?} }}",
             self.tx.as_ref().unwrap(),
-            Hash::from(self.sig.clone())
+            Signature::from(self.sig.clone())
         )
     }
 }
