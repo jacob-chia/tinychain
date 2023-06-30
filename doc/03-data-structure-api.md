@@ -246,12 +246,12 @@ mod tests {
 
 ## 6 小结
 
-这节课我们通过定义数据结构和接口，学到了：
+我们通过定义数据结构和接口，学到了：
 
 - 使用 `thiserror` 优雅地处理错误；
 - 使用 `prost` 处理 Protobuf;
 - 使用泛型 `pub struct Bytes<const T: usize>([u8; T]);` 消除重复代码；
-- 一些常用的 trait `Deref`, `From`, `Debug`,`Display`。
+- 一些常用的 trait `Deref`, `From`, `Debug`, 和 `Display`。
 
 ---
 
