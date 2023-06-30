@@ -12,7 +12,7 @@ pub type Hash = Bytes<32>;
 pub type Signature = Bytes<65>;
 
 // Serialize and deserialize Bytes as a '0x'-prefixed hex string.
-#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct Bytes<const T: usize>([u8; T]);
 
