@@ -129,7 +129,7 @@ mod tests {
         assert_eq!(block.block_reward(), 121);
         assert_eq!(block.parent_hash(), Hash::default());
 
-        let (old_nonce, old_timestamp) = (block.nonce(), block.timestamp());
+        let old_nonce = block.nonce();
         block.update_nonce_and_time();
         assert_ne!(block.nonce(), old_nonce);
     }

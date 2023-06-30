@@ -19,7 +19,7 @@ pub fn hash_message(msg: &[u8]) -> Hash {
     hasher.update(msg);
     hasher.finalize(&mut output);
 
-    Bytes::from(output).into()
+    Bytes::from(output)
 }
 
 pub fn gen_random_number() -> u64 {

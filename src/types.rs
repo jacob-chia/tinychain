@@ -8,11 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 
-/// Block and transaction hash.
 pub type Hash = Bytes<32>;
-/// Account address.
-pub type Address = Bytes<20>;
-/// Transaction signature.
 pub type Signature = Bytes<65>;
 
 // Serialize and deserialize Bytes as a '0x'-prefixed hex string.
