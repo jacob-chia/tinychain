@@ -1,0 +1,70 @@
+// Schema definition for tinychain.
+
+syntax = "proto3";
+
+package v1;
+
+message Block {
+	BlockHeader header = 1;
+	repeated SignedTx txs = 2;
+}
+
+message BlockHeader {
+	bytes parent_hash = 1;
+	uint64 number = 2;
+	uint64 nonce = 3;
+	uint64 timestamp = 4;
+	string author = 5;
+}
+
+message SignedTx {
+	Tx tx = 1;
+	bytes sig = 2;
+}
+
+message Tx {
+	string from = 1;
+	string to = 2;
+	uint64 value = 3;
+	uint64 nonce = 4;
+	uint64 gas = 5;
+	uint64 gas_price = 6;
+	uint64 timestamp = 7;
+}
+
+// Request/response methods.
+enum Method {
+	HEIGHT = 0;
+	BLOCKS = 1;
+}
+
+message Request {
+	Method method = 1;
+	oneof body {
+		BlockHeightReq block_height_req = 2;
+		BlocksReq blocks_req = 3;
+	}
+}
+
+message Response {
+	Method method = 1;
+	oneof body {
+		BlockHeightResp block_height_resp = 2;
+		BlocksResp blocks_resp = 3;
+	}
+}
+
+message BlockHeightReq {}
+
+message BlockHeightResp {
+	uint64 block_height = 1;
+}
+
+message BlocksReq {
+	// Start with given block number.
+	uint64 from_number = 2;
+}
+
+message BlocksResp {
+	repeated Block blocks = 1;
+}

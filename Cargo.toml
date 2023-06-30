@@ -4,6 +4,14 @@
 
 members = ["wallet", "tinyp2p"]
 
+[workspace.dependencies]
+thiserror = "1.0"
+log = "0.4"
+pretty_env_logger = "0.5"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+hex = "0.4"
+
 # Root Crate ----------------------------
 
 [package]
@@ -11,3 +19,22 @@ members = ["wallet", "tinyp2p"]
 name = "tinychain"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+wallet = { version = "0.1.0", path = "wallet" }
+tinyp2p = { version = "0.1.0", path = "tinyp2p" }
+
+thiserror.workspace = true
+log.workspace = true
+pretty_env_logger.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hex.workspace = true
+
+axum = { version = "0.6", features = ["default", "macros"] }
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
+prost = "0.11"
+rand = "0.8"
+
+[build-dependencies]
+prost-build = "0.11"
