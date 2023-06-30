@@ -1,8 +1,8 @@
-//! There are three main components in the p2p module:
+//! There are two main components in this module:
 //!
 //! - `P2pClient` is a wrapper around `tinyp2p::Client` that implements the `Peer` trait.
-//! - `tinyp2p::Server` handles requests from the `P2pClient`, and notifies `EventLoop` of events.
-//! - `EventLoop` handles events from `tinyp2p::Server`.
+//! - `EventHandlerImpl` is an implementation of `EventHandler` that handles inbound requests and
+//!   broadcasts.
 
 use std::ops::Deref;
 
@@ -13,7 +13,6 @@ use crate::{
     biz::{Node, PeerClient, State},
     error::Error,
     schema::*,
-    types::Topic,
 };
 
 // Re-export libp2p functions.
@@ -148,6 +147,31 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
                     error!("❌ >> [P2P-IN-BROADCAST] Invalid tx");
                 }
             }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Topic {
+    Block,
+    Tx,
+}
+
+impl From<&str> for Topic {
+    fn from(topic: &str) -> Self {
+        if topic == "tx" {
+            Self::Tx
+        } else {
+            Self::Block
+        }
+    }
+}
+
+impl From<Topic> for String {
+    fn from(topic: Topic) -> Self {
+        match topic {
+            Topic::Block => "block".into(),
+            Topic::Tx => "tx".into(),
         }
     }
 }

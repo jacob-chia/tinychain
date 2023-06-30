@@ -6,8 +6,6 @@ use crate::{error::Error, types::Hash, utils};
 
 use super::{Block, BlockHeader, SignedTx};
 
-const BLOCK_REWORD: u64 = 100;
-
 impl Block {
     pub fn new(parent_hash: Hash, number: u64, author: String, txs: Vec<SignedTx>) -> Self {
         Self {
@@ -22,15 +20,16 @@ impl Block {
         }
     }
 
-    pub fn hash(&self) -> crate::types::Hash {
+    pub fn hash(&self) -> Hash {
         utils::hash_message(&self.encode_to_vec())
     }
 
+    /// Get the reward which the author will get.
     pub fn block_reward(&self) -> u64 {
-        let gas_reward: u64 = self.txs.iter().map(|tx| tx.gas_cost()).sum();
-        gas_reward + BLOCK_REWORD
+        self.txs.iter().map(|tx| tx.gas_cost()).sum()
     }
 
+    /// Update the nonce and timestamp of the block, which is used for mining.
     pub fn update_nonce_and_time(&mut self) {
         self.header.as_mut().unwrap().nonce = utils::gen_random_number();
         self.header.as_mut().unwrap().timestamp = utils::unix_timestamp();
@@ -72,6 +71,7 @@ impl From<&Block> for Vec<u8> {
 }
 
 // For better logging.
+// `fmt::Debug` is implemented by prost, we can't implement it manually.
 impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let header = self.header.as_ref().unwrap();
@@ -87,16 +87,50 @@ impl fmt::Display for Block {
 }
 
 // For better logging.
+// `fmt::Debug` is implemented by prost, we can't implement it manually.
 impl fmt::Display for BlockHeader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "BlockHeader {{ number: {}, parent_hash: 0x{}, nonce: {}, timestamp: {}, author: \"{}\" }}",
+            "BlockHeader {{ number: {}, parent_hash: {}, nonce: {}, timestamp: {}, author: \"{}\" }}",
             self.number,
-            &hex::encode(&self.parent_hash),
+            Hash::from(self.parent_hash.clone()),
             self.nonce,
             self.timestamp,
             self.author,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::schema::Tx;
+
+    use super::*;
+
+    #[test]
+    fn test_block() {
+        let tx = Tx::new("0x00000000", "0x11111111", 100, 100);
+        let signed_tx = SignedTx {
+            tx: Some(tx),
+            sig: vec![0u8; 65],
+        };
+
+        let mut block = Block::new(
+            Hash::default(),
+            1,
+            "0x01234567".to_string(),
+            vec![signed_tx],
+        );
+
+        assert_eq!(block.number(), 1);
+        assert_eq!(block.author(), "0x01234567");
+        assert_eq!(block.txs.len(), 1);
+        assert_eq!(block.block_reward(), 21);
+        assert_eq!(block.parent_hash(), Hash::default());
+
+        let old_nonce = block.nonce();
+        block.update_nonce_and_time();
+        assert_ne!(block.nonce(), old_nonce);
     }
 }

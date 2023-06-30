@@ -150,7 +150,7 @@ impl<S: State, P: PeerClient> NodeInner<S, P> {
 
     // Sign a transaction on behalf of the user.
     fn sign_tx(&self, tx: Tx) -> Result<SignedTx, Error> {
-        let sig = self.wallet.sign(&tx.message(), &tx.from)?;
+        let sig = self.wallet.sign(&tx.as_bytes(), &tx.from)?;
 
         Ok(SignedTx {
             tx: Some(tx),

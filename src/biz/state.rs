@@ -1,7 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use super::Block;
-use crate::{error::Error, types::Hash};
+use crate::{error::Error, schema::Block, types::Hash};
 
 /// State is a trait that defines the behaviour of a state.
 pub trait State: Debug + Clone + Send + Sync + 'static {

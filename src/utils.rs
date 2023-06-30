@@ -32,6 +32,6 @@ pub fn is_valid_hash(hash: &Hash, mining_difficulty: usize) -> bool {
 }
 
 pub fn verify_tx(tx: &SignedTx) -> Result<(), Error> {
-    wallet::verify_signature(&tx.message(), &tx.sig)?;
+    wallet::verify_signature(&tx.as_bytes(), &tx.sig)?;
     Ok(())
 }

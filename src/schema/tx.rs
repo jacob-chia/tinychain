@@ -2,7 +2,11 @@ use std::{fmt, ops::Deref};
 
 use prost::Message;
 
-use crate::{error::Error, types::Hash, utils};
+use crate::{
+    error::Error,
+    types::{Hash, Signature},
+    utils,
+};
 
 use super::{SignedTx, Tx};
 
@@ -22,24 +26,25 @@ impl Tx {
         }
     }
 
+    /// The gas cost will be charged from the sender and given to the miner.
     pub fn gas_cost(&self) -> u64 {
         self.gas * self.gas_price
     }
 
+    /// The total cost of the transaction.
     pub fn cost(&self) -> u64 {
         self.value + self.gas_cost()
     }
 
-    pub fn message(&self) -> Vec<u8> {
+    pub fn as_bytes(&self) -> Vec<u8> {
         self.encode_to_vec()
     }
 
     pub fn hash(&self) -> Hash {
-        utils::hash_message(&self.message())
+        utils::hash_message(&self.as_bytes())
     }
 }
 
-// `Deref` makes `SignedTx` behave like `Tx`.
 impl Deref for SignedTx {
     type Target = Tx;
 
@@ -69,24 +74,26 @@ impl From<Tx> for Vec<u8> {
 }
 
 // For better logging.
+// `fmt::Debug` is implemented by prost, we can't implement it manually.
 impl fmt::Display for SignedTx {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "SignedTx{{ tx: {}, sig: 0x{} }}",
+            "SignedTx{{ tx: {:?}, sig: {:?} }}",
             self.tx.as_ref().unwrap(),
-            &hex::encode(&self.sig)
+            Signature::from(self.sig.clone())
         )
     }
 }
 
-// For better logging.
-impl fmt::Display for Tx {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Tx{{ from: \"{}\", to: \"{}\", value: {}, nonce: {}, gas: {}, gas_price: {}, timestamp: {} }}",
-            self.from, self.to, self.value, self.nonce, self.gas, self.gas_price, self.timestamp
-        )
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tx() {
+        let tx = Tx::new("from", "to", 100, 0);
+        assert_eq!(tx.gas_cost(), 21);
+        assert_eq!(tx.cost(), 121);
     }
 }

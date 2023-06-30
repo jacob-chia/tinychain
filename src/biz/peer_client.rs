@@ -1,8 +1,9 @@
 use std::fmt::Debug;
 
-use crate::error::Error;
-
-use super::{Block, SignedTx};
+use crate::{
+    error::Error,
+    schema::{Block, SignedTx},
+};
 
 /// PeerClient is a trait that defines the behaviour of a peer client.
 pub trait PeerClient: Debug + Clone + Send + Sync + 'static {

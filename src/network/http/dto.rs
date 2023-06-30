@@ -1,11 +1,13 @@
 //! DTO (Data Transfer Object) for HTTP requests and responses.
 //!
-//! For demonstration purposes, we use readable JSON strings as the DTOs.
+//! We use JSON as the DTO format for better readability.
 
 use serde::{Deserialize, Serialize};
 
-use crate::{schema, types::Hash};
-use wallet::Signature;
+use crate::{
+    schema,
+    types::{Hash, Signature},
+};
 
 #[derive(Debug, Serialize)]
 pub struct Tx {
@@ -81,7 +83,7 @@ impl From<schema::SignedTx> for SignedTx {
     fn from(tx: schema::SignedTx) -> Self {
         Self {
             tx: tx.tx.unwrap().into(),
-            sig: Signature::from(tx.sig.as_slice()),
+            sig: Signature::from(tx.sig),
         }
     }
 }
