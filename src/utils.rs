@@ -3,7 +3,11 @@ use std::time::SystemTime;
 use rand::{thread_rng, Rng};
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::{error::Error, schema::SignedTx, types::Hash};
+use crate::{
+    error::Error,
+    schema::SignedTx,
+    types::{Hash, Signature},
+};
 
 pub fn unix_timestamp() -> u64 {
     SystemTime::now()
@@ -32,6 +36,7 @@ pub fn is_valid_hash(hash: &Hash, mining_difficulty: usize) -> bool {
 }
 
 pub fn verify_tx(tx: &SignedTx) -> Result<(), Error> {
-    wallet::verify_signature(&tx.as_bytes(), &tx.sig)?;
+    let sig = Signature::from(tx.sig.clone());
+    wallet::verify_signature(&tx.as_bytes(), sig)?;
     Ok(())
 }

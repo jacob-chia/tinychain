@@ -153,9 +153,7 @@ impl<const T: usize> TryFrom<String> for Bytes<T> {
 // 所以，永远只手动实现 From trait.
 impl<const T: usize> From<Bytes<T>> for String {
     fn from(bytes: Bytes<T>) -> Self {
-        let mut s = String::from("0x");
-        s.push_str(&hex::encode(bytes.0));
-        s
+        String::from("0x") + &hex::encode(bytes.0)
     }
 }
 ```

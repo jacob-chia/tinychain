@@ -10,12 +10,9 @@ Cargo.lock
 **/*.rs.bk
 
 
-# Added by cargo
-
-/target
-
 # Dev directories/files
-/db/database
-/db1
-/db2
-/doc-drafts
+/.vscode/
+/db/database/
+/db1/
+/db2/
+/doc-drafts/

@@ -11,6 +11,18 @@ use crate::error::Error;
 pub type Hash = Bytes<32>;
 pub type Signature = Bytes<65>;
 
+impl From<wallet::Signature> for Signature {
+    fn from(signature: wallet::Signature) -> Self {
+        Self(signature.into())
+    }
+}
+
+impl From<Signature> for wallet::Signature {
+    fn from(signature: Signature) -> Self {
+        Self::from(signature.0)
+    }
+}
+
 // Serialize and deserialize Bytes as a '0x'-prefixed hex string.
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
@@ -82,9 +94,7 @@ impl<const T: usize> From<Bytes<T>> for Vec<u8> {
 
 impl<const T: usize> From<Bytes<T>> for String {
     fn from(bytes: Bytes<T>) -> Self {
-        let mut s = String::from("0x");
-        s.push_str(&hex::encode(bytes.0));
-        s
+        String::from("0x") + &hex::encode(bytes.0)
     }
 }
 

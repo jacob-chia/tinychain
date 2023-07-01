@@ -154,7 +154,7 @@ impl<S: State, P: PeerClient> NodeInner<S, P> {
 
         Ok(SignedTx {
             tx: Some(tx),
-            sig: sig.into(),
+            sig: sig.to_vec(),
         })
     }
 }
