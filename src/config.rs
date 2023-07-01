@@ -14,7 +14,7 @@ pub struct Config {
     pub genesis_file: String,
     /// The address to listen on for HTTP Server.
     pub http_addr: String,
-    /// The author account to receive mining rewards.
+    /// The miner account to receive mining rewards.
     pub author: String,
     /// P2p configuration.
     pub p2p: P2pConfig,

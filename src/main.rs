@@ -64,7 +64,6 @@ fn new_account(keystore_dir: &str) {
     let wallet = Wallet::new(keystore_dir);
     let acc = wallet.new_account().unwrap();
     info!("📣 New account: {:?}", acc);
-    info!("📣 Saved in: {:?}", keystore_dir);
 }
 
 fn new_secret_key() {
