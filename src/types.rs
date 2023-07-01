@@ -82,9 +82,7 @@ impl<const T: usize> From<Bytes<T>> for Vec<u8> {
 
 impl<const T: usize> From<Bytes<T>> for String {
     fn from(bytes: Bytes<T>) -> Self {
-        let mut s = String::from("0x");
-        s.push_str(&hex::encode(bytes.0));
-        s
+        String::from("0x") + &hex::encode(bytes.0)
     }
 }
 
