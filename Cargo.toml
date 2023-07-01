@@ -38,6 +38,12 @@ axum = { version = "0.6", features = ["default", "macros"] }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 prost = "0.11"
 rand = "0.8"
+clap = { version = "4.3", features = ["derive"] }
+toml = "0.7"
 
 [build-dependencies]
 prost-build = "0.11"
+
+
+[dev-dependencies]
+project-root = "0.2"

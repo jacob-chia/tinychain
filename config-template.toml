@@ -1,0 +1,12 @@
+## The path to the data directory.
+data_dir = "./db/database/"
+## The path to the genesis file.
+genesis_file = "./genesis.json"
+## The address to listen on for HTTP Server.
+http_addr = "127.0.0.1:8000"
+## The miner account to receive mining rewards.
+author = "0xb98836a093828d1c97d26eba9270a670652231e1"
+
+[wallet]
+## The path to the keystores directory.
+keystore_dir = "./db/keystore/"
