@@ -1,6 +1,6 @@
 //! Signature type for transactions.
 //!
-//! A signature is a 65-byte array, where the first 64 bytes is the `ecdsa::Signature`,
+//! A signature is a 65-byte array, where the first 64 bytes is the `ecdsa::Signature<Secp256k1>`,
 //! and the last byte is the `ecdsa::RecoveryId`.
 
 use std::ops::Deref;
@@ -12,14 +12,6 @@ use crate::WalletError;
 #[derive(Clone, Copy)]
 pub struct Signature([u8; 65]);
 
-impl Deref for Signature {
-    type Target = [u8; 65];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 impl From<(ecdsa::Signature, ecdsa::RecoveryId)> for Signature {
     fn from((sig, recid): (ecdsa::Signature, ecdsa::RecoveryId)) -> Self {
         let mut bytes = [0u8; 65];
@@ -29,16 +21,24 @@ impl From<(ecdsa::Signature, ecdsa::RecoveryId)> for Signature {
     }
 }
 
-impl TryFrom<&Signature> for (ecdsa::Signature, ecdsa::RecoveryId) {
+impl TryFrom<Signature> for (ecdsa::Signature, ecdsa::RecoveryId) {
     type Error = WalletError;
 
-    fn try_from(value: &Signature) -> Result<Self, Self::Error> {
+    fn try_from(value: Signature) -> Result<Self, Self::Error> {
         let sig = ecdsa::Signature::from_bytes(value[..64].as_ref().into())
             .map_err(|_| WalletError::InvalidSignature)?;
 
         let recid = ecdsa::RecoveryId::from_byte(value[64]).ok_or(WalletError::InvalidSignature)?;
 
         Ok((sig, recid))
+    }
+}
+
+impl Deref for Signature {
+    type Target = [u8; 65];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -84,7 +84,7 @@ mod tests {
         );
         let signature = Signature(bytes);
 
-        let (sig, recid): (ecdsa::Signature, ecdsa::RecoveryId) = (&signature).try_into().unwrap();
+        let (sig, recid): (ecdsa::Signature, ecdsa::RecoveryId) = signature.try_into().unwrap();
         assert_eq!(&bytes[..64], &sig.to_bytes()[..]);
         assert_eq!(bytes[64], recid.to_byte());
 

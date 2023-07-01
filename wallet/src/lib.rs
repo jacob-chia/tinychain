@@ -59,7 +59,8 @@ impl Wallet {
 }
 
 /// Verify a signature for a message, does not require a wallet.
-pub fn verify_signature(msg: &[u8], signature: &Signature) -> Result<(), WalletError> {
+pub fn verify_signature(msg: &[u8], signature: impl Into<Signature>) -> Result<(), WalletError> {
+    let signature = signature.into();
     let (sig, recid) = signature.try_into()?;
     let digest = Keccak256::new_with_prefix(msg);
 
@@ -104,7 +105,7 @@ mod tests {
         let msg = b"hello world";
         let sig = wallet.sign(msg, &addr).unwrap();
 
-        assert!(verify_signature(msg, &sig).is_ok());
+        assert!(verify_signature(msg, sig).is_ok());
     }
 
     fn tempdir_with_prefix(prefix: &str) -> String {
