@@ -6,4 +6,7 @@ pub enum Error {
     InvalidHex(#[from] hex::FromHexError),
     #[error(transparent)]
     InvalidP2pMessage(#[from] prost::DecodeError),
+
+    #[error(transparent)]
+    WalletFailure(#[from] wallet::WalletError),
 }
