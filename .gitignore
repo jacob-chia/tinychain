@@ -12,7 +12,7 @@ Cargo.lock
 
 # Dev directories/files
 /.vscode/
-/db/database/
+/db/
 /db1/
 /db2/
 /doc-drafts/
