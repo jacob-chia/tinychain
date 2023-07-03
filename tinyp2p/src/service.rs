@@ -160,7 +160,7 @@ impl Server {
         config: P2pConfig,
         cmd_receiver: UnboundedReceiver<Command>,
     ) -> Result<Self, P2pError> {
-        let addr = config.addr.parse()?;
+        let addr: Multiaddr = config.addr.parse()?;
         let local_key = config.gen_keypair()?;
         let local_peer_id = local_key.public().to_peer_id();
         info!("📣 Local peer id: {local_peer_id:?}");
@@ -172,6 +172,9 @@ impl Server {
             let behaviour = Behaviour::new(local_key, pubsub_topics.clone(), config.req_resp)?;
             SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build()
         };
+        // Switch to server mode.
+        // TODO remove this when server mode can be configured.
+        swarm.add_external_address(addr.clone());
         swarm.listen_on(addr)?;
 
         // Connect to the boot node if specified.

@@ -3,7 +3,7 @@ use std::{io, iter, time::Duration};
 use async_trait::async_trait;
 use libp2p::{
     futures::prelude::*,
-    request_response::{self, Behaviour, Codec, ProtocolName, ProtocolSupport},
+    request_response::{self, Behaviour, Codec, ProtocolSupport},
 };
 
 pub type ResponseType = Result<Vec<u8>, ()>;
@@ -83,16 +83,16 @@ impl BehaviourBuilder {
         cfg.set_connection_keep_alive(self.connection_keep_alive);
         cfg.set_request_timeout(self.request_timeout);
 
-        Behaviour::new(codec, protocols, cfg)
+        Behaviour::with_codec(codec, protocols, cfg)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct GenericProtocol;
 
-impl ProtocolName for GenericProtocol {
-    fn protocol_name(&self) -> &[u8] {
-        b"/tinyp2p/req-resp/1.0.0"
+impl AsRef<str> for GenericProtocol {
+    fn as_ref(&self) -> &str {
+        "/tinyp2p/req-resp/1.0.0"
     }
 }
 

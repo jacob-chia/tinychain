@@ -88,7 +88,7 @@ impl PeerIdWithMultiaddr {
 
 impl fmt::Display for PeerIdWithMultiaddr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let proto = multiaddr::Protocol::P2p(From::from(self.0));
+        let proto = multiaddr::Protocol::P2p(self.0);
         let p2p_addr = self.1.clone().with(proto);
 
         fmt::Display::fmt(&p2p_addr, f)
@@ -122,9 +122,7 @@ fn parse_str_addr(addr_str: &str) -> Result<(PeerId, Multiaddr), P2pError> {
     let mut addr: Multiaddr = addr_str.parse()?;
 
     let peer_id = match addr.pop() {
-        Some(multiaddr::Protocol::P2p(key)) => {
-            PeerId::from_multihash(key).map_err(|_| P2pError::InvalidPeerId)?
-        }
+        Some(multiaddr::Protocol::P2p(peer_id)) => peer_id,
         _ => return Err(P2pError::InvalidPeerId),
     };
 
