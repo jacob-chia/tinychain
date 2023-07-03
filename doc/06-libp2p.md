@@ -347,7 +347,7 @@ Automatically configure client/server mode based on external addresses. If we ha
 
 ## 4 小结
 
-我们一起学习了 libp2p 的架构、理清了封装思路，以及通过分析项目需求确定了我们要做的事，这样就把封装 libp2p 的工作拆分成了一个个小问题，下节课我们逐一解决这些小问题即可。
+我们一起学习了 libp2p 的架构、理清了封装思路，以及通过分析项目需求确定了我们要做的事，相当于列出了下节课要解决的 issues，其实把 Issue 理清之后问题就解决了一大半，下节课我们一起解决这些 issues。
 
 另外，libp2p 还有一个局域网节点发现协议 mDNS，这个协议使用起来非常简单，几乎不需要配置，感兴趣的同学可以试试。
 
