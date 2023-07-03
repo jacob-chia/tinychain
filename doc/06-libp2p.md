@@ -277,7 +277,13 @@ pub fn remove(&mut self, addr: &Multiaddr) -> Result<(), ()> {
 ```md
 // https://docs.rs/libp2p/latest/libp2p/kad/index.html#important-discrepancies
 
-Peer Discovery with Identify In other libp2p implementations, the Identify protocol might be seen as a core protocol. Rust-libp2p tries to stay as generic as possible, and does not make this assumption. This means that the Identify protocol must be manually hooked up to Kademlia through calls to Kademlia::add_address. If you choose not to use the Identify protocol, and do not provide an alternative peer discovery mechanism, a Kademlia node will not discover nodes beyond the network’s boot nodes. Without the Identify protocol, existing nodes in the kademlia network cannot obtain the listen addresses of nodes querying them, and thus will not be able to add them to their routing table.
+Peer Discovery with Identify In other libp2p implementations, the Identify protocol might be seen as a core protocol.
+Rust-libp2p tries to stay as generic as possible, and does not make this assumption.
+This means that the Identify protocol must be manually hooked up to Kademlia through calls to `Kademlia::add_address`.
+If you choose not to use the Identify protocol, and do not provide an alternative peer discovery mechanism,
+a Kademlia node will not discover nodes beyond the network’s boot nodes. Without the Identify protocol,
+existing nodes in the kademlia network cannot obtain the listen addresses of nodes querying them, and thus will not be
+able to add them to their routing table.
 ```
 
 也就是说，Bootstrap 过程只会尝试发现新节点并与之建立链接，但不会将其加入 DHT。需要依赖 Identify 协议，在交换节点信息（包含地址）时显式调用`Kademlia::add_address`来将其加入 DHT。
@@ -303,11 +309,15 @@ Peer Discovery with Identify In other libp2p implementations, the Identify proto
 ```md
 ## Automatic kademlia client/server mode
 
-Let's get the biggest one out the way first, I promise the other points are easier explained but equally exciting. The tl;dr is: Healthier Kademlia routing tables and an improved developer experience.
+Let's get the biggest one out the way first, I promise the other points are easier explained but equally exciting.
+The tl;dr is: Healthier Kademlia routing tables and an improved developer experience.
 
 If you don't know about Kademlia's client/server mode, checkout the specs.
 
-With the v0.52 release, rust-libp2p automatically configures Kademlia in client or server mode depending on our external addresses. If we have a confirmed, external address, we will operate in server-mode, otherwise client-mode. This is entirely configuration-free (yay!) although follow-up work is under-way to allow setting this manually in certain situations: #4074.
+With the v0.52 release, rust-libp2p automatically configures Kademlia in client or server mode depending on our
+external addresses. If we have a confirmed, external address, we will operate in server-mode, otherwise client-mode.
+This is entirely configuration-free (yay!) although follow-up work is under-way to allow setting this manually
+in certain situations: #4074.
 ```
 
 也就是说，在我的开发环境中没有公网 IP，所以 libp2p 自动以 Client 模式启动，并且，目前还不支持配置！（看到这儿差点回滚版本）。
@@ -317,7 +327,12 @@ With the v0.52 release, rust-libp2p automatically configures Kademlia in client 
 ```md
 // https://github.com/libp2p/rust-libp2p/blob/master/protocols/kad/CHANGELOG.md#0440
 
-Automatically configure client/server mode based on external addresses. If we have or learn about an external address of our node, e.g. through `Swarm::add_external_address` or automated through libp2p-autonat, we operate in server-mode and thus allow inbound requests. By default, a node is in client-mode and only allows outbound requests. If you want to maintain the status quo, i.e. **always operate in server mode, make sure to add at least one external address through `Swarm::add_external_address`**. See also Kademlia specification for an introduction to Kademlia client/server mode. See PR 3877.
+Automatically configure client/server mode based on external addresses. If we have or learn about an external
+address of our node, e.g. through `Swarm::add_external_address` or automated through libp2p-autonat, we operate
+in server-mode and thus allow inbound requests. By default, a node is in client-mode and only allows outbound requests.
+If you want to maintain the status quo,
+i.e. **always operate in server mode, make sure to add at least one external address through `Swarm::add_external_address`**.
+See also Kademlia specification for an introduction to Kademlia client/server mode. See PR 3877.
 ```
 
 还好可以通过`Swarm::add_external_address`来将 Peer 切换为 Server 模式。
