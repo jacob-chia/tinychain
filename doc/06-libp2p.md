@@ -29,6 +29,13 @@
 
 从本课开始，就到了项目的重头戏了。学习 libp2p 任重而道远，但成为 libp2p 高手之前，我觉得更重要的是先把它用起来。本课程不会涉及过多底层原理，而是从实战角度使用 libp2p。
 
+这节课不写代码，在写代码之间，我们要弄清楚几个问题：
+
+1. libp2p 怎么用？
+2. 如何封装 libp2p？
+3. 我们要基于 libp2p 的哪些模块封装？
+4. 如何封装这些模块？
+
 ## 1 libp2p 架构
 
 ### 1.1 分层
@@ -362,7 +369,27 @@ See also Kademlia specification for an introduction to Kademlia client/server mo
 
 ## 4 小结
 
-我们一起学习了 libp2p 的架构、理清了封装思路，以及通过分析项目需求确定了我们要做的事，相当于列出了下节课要解决的 issues，其实把 Issue 理清之后问题就解决了一大半，下节课我们一起解决这些 issues。
+这节课内容较多，但目的明确，我们找到了以下几个问题的答案：
+
+1. libp2p 怎么用？
+
+- libp2p 分为三层：`transport`, `swarm`, `protocol`
+- 运行一个 P2P 节点的步骤：`构造 transport` -> `构造 protocol` -> `构造 swarm` -> `运行 swarm` -> `处理 swarm events`
+
+2. 如何封装 libp2p？
+
+- `自定义 protocol`：工作量很大，可能要重新实现官方已提供的 protocols
+- `自定义 swarm event handlers`：较简单，找到要处理哪些 evnets，问题就解决了一半
+
+3. 我们要基于 libp2p 的哪些模块封装？
+
+- 节点发现：`kademlia`, `identify`, `ping`
+- 请求响应：`request-response`
+- 广播消息：`gossipsub`
+
+4. 如何封装这些模块？
+
+- 内容较多，详见上文。我们相当于列出了下节课要解决的 issues，为下节课的动手实践理清了思路。
 
 另外，libp2p 还有一个局域网节点发现协议 mDNS，这个协议使用起来非常简单，几乎不需要配置，感兴趣的同学可以试试。
 
