@@ -19,7 +19,7 @@ use crate::{
 pub use tinyp2p::new_secret_key;
 
 /// Creates a new p2p client, event loop, and server.
-pub fn new(config: P2pConfig) -> Result<(P2pClient, Server), Error> {
+pub fn new<S: State>(config: P2pConfig) -> Result<(P2pClient, Server<EventHandlerImpl<S>>), Error> {
     let (client, p2p_server) = tinyp2p::new(config)?;
     let p2p_client = P2pClient::new(client);
 

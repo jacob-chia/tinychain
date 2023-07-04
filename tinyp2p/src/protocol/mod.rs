@@ -1,14 +1,12 @@
-//! [What is a NetworkBehaviour](https://docs.rs/libp2p/latest/libp2p/swarm/trait.NetworkBehaviour.html)
-
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     hash::{Hash, Hasher},
     io,
+    net::IpAddr,
     time::Duration,
 };
 
 use either::Either;
-use ip_network::IpNetwork;
 use libp2p::{
     gossipsub::{self, IdentTopic},
     identify,
@@ -166,14 +164,35 @@ impl Behaviour {
 
 fn can_add_to_dht(addr: &Multiaddr) -> bool {
     let ip = match addr.iter().next() {
-        Some(Protocol::Ip4(ip)) => IpNetwork::from(ip),
-        Some(Protocol::Ip6(ip)) => IpNetwork::from(ip),
+        Some(Protocol::Ip4(ip)) => IpAddr::V4(ip),
+        Some(Protocol::Ip6(ip)) => IpAddr::V6(ip),
         Some(Protocol::Dns(_)) | Some(Protocol::Dns4(_)) | Some(Protocol::Dns6(_)) => return true,
         _ => return false,
     };
 
-    // In the real world, we would only allow global IPs.
-    // However, for demo purposes, local IPs are allowed as well.
-    // ip.is_global()
-    !ip.is_loopback()
+    !ip.is_loopback() && !ip.is_unspecified()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_can_add_to_dht() {
+        let ip4_loopback: Multiaddr = "/ip4/127.0.0.1/tcp/8000".parse().unwrap();
+        let ip6_loopback: Multiaddr = "/ip6/::1/tcp/8000".parse().unwrap();
+        let ip4_unspecified: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
+        let ip6_unspecified: Multiaddr = "/ip6/::/tcp/0".parse().unwrap();
+        let ip4: Multiaddr = "/ip4/192.168.0.10/tcp/8000".parse().unwrap();
+        let ip6: Multiaddr = "/ip6/fe80::1/tcp/8000".parse().unwrap();
+        let domain_name: Multiaddr = "/dns4/example.com/tcp/8000".parse().unwrap();
+
+        assert!(!can_add_to_dht(&ip4_loopback));
+        assert!(!can_add_to_dht(&ip6_loopback));
+        assert!(!can_add_to_dht(&ip4_unspecified));
+        assert!(!can_add_to_dht(&ip6_unspecified));
+        assert!(can_add_to_dht(&ip4));
+        assert!(can_add_to_dht(&ip6));
+        assert!(can_add_to_dht(&domain_name));
+    }
 }

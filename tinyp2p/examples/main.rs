@@ -8,7 +8,11 @@ use tokio::task;
 async fn main() {
     pretty_env_logger::init();
 
-    let mut config = P2pConfig::default();
+    let mut config = P2pConfig {
+        addr: "/ip4/0.0.0.0/tcp/0".to_string(),
+        pubsub_topics: vec!["block".to_string(), "tx".to_string()],
+        ..Default::default()
+    };
     config.pubsub_topics = vec!["block".to_string(), "tx".to_string()];
     if let Some(addr) = std::env::args().nth(1) {
         config.boot_node = addr.parse().ok();
@@ -29,8 +33,7 @@ async fn main() {
     thread::spawn(move || request(client_clone));
 
     // Periodically make a broadcast to the network.
-    let client_clone = client.clone();
-    thread::spawn(move || broadcast(client_clone));
+    broadcast(client);
 }
 
 #[derive(Debug)]
