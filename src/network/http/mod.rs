@@ -5,13 +5,17 @@ use std::net::SocketAddr;
 use axum::{
     extract::{Extension, Path, Query},
     http::StatusCode,
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router, Server,
 };
 use log::info;
+use serde_json::json;
 
-use crate::biz::{Node, PeerClient, State};
+use crate::{
+    biz::{Node, PeerClient, State},
+    error::Error,
+};
 
 mod dto;
 
@@ -39,39 +43,97 @@ pub fn new_router<S: State, P: PeerClient>(node: Node<S, P>) -> Router {
 }
 
 async fn get_blocks<S: State, P: PeerClient>(
-    Extension(_node): Extension<Node<S, P>>,
-    Query(_params): Query<GetBlocksReq>,
+    Extension(node): Extension<Node<S, P>>,
+    Query(params): Query<GetBlocksReq>,
 ) -> impl IntoResponse {
-    todo!()
+    info!("📣 >> get_blocks by: {:?}", params);
+    let blocks: Vec<BlockResp> = node
+        .get_blocks(params.from_number)
+        .into_iter()
+        .map(BlockResp::from)
+        .collect();
+    info!("📣 << get_blocks response: {:?}", blocks);
+
+    Json(blocks)
 }
 
 async fn get_block<S: State, P: PeerClient>(
-    Extension(_node): Extension<Node<S, P>>,
-    Path(_number): Path<u64>,
+    Extension(node): Extension<Node<S, P>>,
+    Path(number): Path<u64>,
 ) -> impl IntoResponse {
-    todo!()
+    info!("📣 >> get_block by: {:?}", number);
+    let block = node.get_block(number).map(BlockResp::from);
+    info!("📣 << get_block response: {:?}", block);
+
+    Json(block)
 }
 
 async fn get_balances<S: State, P: PeerClient>(
-    Extension(_node): Extension<Node<S, P>>,
+    Extension(node): Extension<Node<S, P>>,
 ) -> impl IntoResponse {
-    todo!()
+    info!("📣 >> get_balances");
+    let resp = json!({
+        "last_block_hash": node.last_block_hash(),
+        "balances": node.get_balances(),
+    });
+    info!("📣 << get_balances response: {:?}", resp);
+
+    Json(resp)
 }
 
 async fn next_account_nonce<S: State, P: PeerClient>(
-    Extension(_node): Extension<Node<S, P>>,
-    Query(_params): Query<NonceReq>,
+    Extension(node): Extension<Node<S, P>>,
+    Query(params): Query<NonceReq>,
 ) -> impl IntoResponse {
-    todo!()
+    info!("📣 >> next_account_nonce by: {:?}", params);
+    let resp = json!({ "nonce": node.next_account_nonce(&params.account) });
+    info!("📣 << next_account_nonce response: {:?}", resp);
+
+    Json(resp)
 }
 
 async fn transfer<S: State, P: PeerClient>(
-    Extension(_node): Extension<Node<S, P>>,
-    Json(_tx): Json<TxReq>,
-) -> impl IntoResponse {
-    todo!()
+    Extension(node): Extension<Node<S, P>>,
+    Json(tx): Json<TxReq>,
+) -> Result<impl IntoResponse, HttpError> {
+    info!("📣 >> transfer: {:?}", tx);
+    let resp = node.transfer(&tx.from, &tx.to, tx.value, tx.nonce);
+    info!("📣 << transfer response: {:?}", resp);
+
+    resp?;
+    Ok(Json(json!({"success": true})))
 }
 
 async fn not_found() -> impl IntoResponse {
     (StatusCode::NOT_FOUND, "Not Found")
+}
+
+#[derive(thiserror::Error, Debug)]
+enum HttpError {
+    #[error("Bad request: {0}")]
+    BadRequest(Error),
+    #[error("Internal server error: {0}")]
+    InternalServerError(Error),
+}
+
+impl From<Error> for HttpError {
+    fn from(err: Error) -> Self {
+        match err {
+            Error::BadRequest(..) => HttpError::BadRequest(err),
+            _ => HttpError::InternalServerError(err),
+        }
+    }
+}
+
+impl IntoResponse for HttpError {
+    fn into_response(self) -> Response {
+        let status = match self {
+            HttpError::BadRequest(_) => StatusCode::BAD_REQUEST,
+            HttpError::InternalServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        let body = Json(json!({ "error": self.to_string() }));
+
+        (status, body).into_response()
+    }
 }

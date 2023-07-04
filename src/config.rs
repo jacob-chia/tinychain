@@ -1,6 +1,7 @@
 use std::fs;
 
 use serde::Deserialize;
+use tinyp2p::P2pConfig;
 use wallet::WalletConfig;
 
 use crate::error::Error;
@@ -15,6 +16,8 @@ pub struct Config {
     pub http_addr: String,
     /// The miner account to receive mining rewards.
     pub author: String,
+    /// P2p configuration.
+    pub p2p: P2pConfig,
     /// Wallet configuration.
     pub wallet: WalletConfig,
 }
@@ -45,6 +48,7 @@ mod tests {
             genesis_file,
             http_addr,
             author: miner,
+            p2p,
             wallet,
         } = Config::load(path_str).unwrap();
 
@@ -53,5 +57,39 @@ mod tests {
         assert_eq!(http_addr, "127.0.0.1:8000");
         assert_eq!(miner, "0xb98836a093828d1c97d26eba9270a670652231e1");
         assert_eq!(wallet.keystore_dir, "./db/keystore/");
+
+        let P2pConfig {
+            addr,
+            secret,
+            boot_node,
+            discovery_interval,
+            pubsub_topics,
+            req_resp,
+        }: P2pConfig = p2p;
+
+        assert_eq!(addr, "/ip4/0.0.0.0/tcp/9000");
+
+        assert_eq!(
+            secret.unwrap(),
+            "XZYk2USPCmrRp7mCu5pT8XuQKprUf58qESu4QcQv9rJ"
+        );
+
+        let boot_node = boot_node.unwrap();
+        assert_eq!(
+            boot_node.peer_id().to_base58(),
+            "12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc"
+        );
+        assert_eq!(boot_node.address().to_string(), "/ip4/127.0.0.1/tcp/9000");
+        assert_eq!(discovery_interval, Some(30));
+        assert_eq!(
+            pubsub_topics,
+            vec![String::from("block"), String::from("tx")]
+        );
+
+        let req_resp = req_resp.unwrap();
+        assert_eq!(req_resp.connection_keep_alive, Some(10));
+        assert_eq!(req_resp.request_timeout, Some(10));
+        assert_eq!(req_resp.max_request_size, Some(1048576));
+        assert_eq!(req_resp.max_response_size, Some(1048576));
     }
 }

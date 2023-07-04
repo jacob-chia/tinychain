@@ -13,9 +13,10 @@ use biz::Node;
 use data::MemoryState;
 use log::info;
 use network::{http, p2p::P2pClient};
+use tokio::task;
 use wallet::Wallet;
 
-use crate::config::Config;
+use crate::{config::Config, network::p2p};
 
 /// The command of tinychain
 #[derive(Debug, Parser)]
@@ -32,6 +33,8 @@ enum SubCommand {
         #[arg(short, long, default_value_t = String::from("./db/keystore/"))]
         keystore_dir: String,
     },
+    /// Create a random secret key for generating local peer id and keypair
+    NewSecret,
     /// Run the node
     Run {
         /// the config file path, default is `config.toml`
@@ -47,6 +50,7 @@ async fn main() {
 
     match opts.subcmd {
         SubCommand::NewAccount { keystore_dir } => new_account(&keystore_dir),
+        SubCommand::NewSecret => new_secret_key(),
         SubCommand::Run { config } => run(&config).await,
     }
 }
@@ -57,11 +61,21 @@ fn new_account(keystore_dir: &str) {
     info!("📣 New account: {:?}", acc);
 }
 
+fn new_secret_key() {
+    let secret = p2p::new_secret_key();
+    info!("📣 New secret key: {:?}", secret);
+}
+
 async fn run(config_file: &str) {
     let cfg = Config::load(config_file).unwrap();
     info!("📣 Config loaded: {:?}", cfg);
-
     let addr = cfg.http_addr.parse().unwrap();
-    let node = Node::<MemoryState, P2pClient>::new();
+
+    let (p2p_client, mut p2p_server) = p2p::new::<MemoryState>(cfg.p2p).unwrap();
+    let node = Node::<MemoryState, P2pClient>::new(p2p_client);
+    let event_handler = p2p::EventHandlerImpl::new(node.clone());
+    p2p_server.set_event_handler(event_handler);
+
+    task::spawn(p2p_server.run());
     http::run(addr, node).await;
 }
