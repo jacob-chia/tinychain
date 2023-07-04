@@ -5,7 +5,7 @@
 pub mod config;
 pub mod error;
 
-mod behaviour;
+mod protocol;
 mod service;
 mod transport;
 

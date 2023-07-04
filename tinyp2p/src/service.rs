@@ -8,19 +8,6 @@
 //!
 //! - `EventHandler`: the trait that defines how to handle requests / broadcast-messages from remote peers.
 //!   The application should implement this trait and pass it to the `Server`.
-//!
-//! ## When to add an address to the DHT?
-//!
-//! See [Discovery Discrepancies](https://docs.rs/libp2p/latest/libp2p/kad/index.html#important-discrepancies) first.
-//! So, every time we receive a `identify::Event::Received` event, we should manually add the peer's addresses to the DHT.
-//!
-//! ## When to remove a peer from the DHT?
-//!
-//! See [source code](https://github.com/libp2p/rust-libp2p/blob/master/protocols/kad/src/behaviour.rs#L1765) first.
-//!
-//! Kademlia never removes peers from the DHT, so we manually remove the peer when:
-//! - A connected peer is unreachable (received a `ping::Event {result: Err(_), ..}`).
-//! - Cannot connect to a peer that is in the DHT (received a `SwarmEvent::OutgoingConnectionError`).
 
 use std::{cell::OnceCell, collections::HashMap, fmt::Debug, io, time::Duration};
 
@@ -45,7 +32,7 @@ use tokio::{
     time::{self, Interval},
 };
 
-use crate::{behaviour::*, config::P2pConfig, error::P2pError, transport};
+use crate::{config::P2pConfig, error::P2pError, protocol::*, transport};
 
 /// `EventHandler` is the trait that defines how to handle requests / broadcast-messages from remote peers.
 pub trait EventHandler: Debug + Send + 'static {
