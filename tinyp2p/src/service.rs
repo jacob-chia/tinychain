@@ -160,7 +160,7 @@ impl Server {
             SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build()
         };
         // Switch to server mode.
-        // TODO remove this when server mode can be configured.
+        // TODO remove this when the mode can be configured.
         swarm.add_external_address(addr.clone());
         swarm.listen_on(addr)?;
 

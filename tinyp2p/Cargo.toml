@@ -24,7 +24,6 @@ libp2p = { version = "0.52", features = [
     "gossipsub",
     "macros",
 ] }
-linked_hash_set = "0.1"
 either = "1.8"
 itertools = "0.11"
 async-trait = "0.1"
