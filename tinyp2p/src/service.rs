@@ -48,7 +48,7 @@ pub struct Client {
     cmd_sender: UnboundedSender<Command>,
 }
 
-pub struct Server {
+pub struct Server<E: EventHandler> {
     /// The actual network service.
     network_service: Swarm<Behaviour>,
 
@@ -59,7 +59,7 @@ pub struct Server {
     /// The receiver of commands from the client.
     cmd_receiver: UnboundedReceiver<Command>,
     /// The handler of events from remote peers.
-    event_handler: OnceCell<Box<dyn EventHandler>>,
+    event_handler: OnceCell<E>,
 
     /// The ticker to periodically discover new peers.
     discovery_ticker: Interval,
@@ -77,7 +77,7 @@ pub fn new_secret_key() -> String {
 }
 
 /// Create a new p2p node, which consists of a `Client` and a `Server`.
-pub fn new(config: P2pConfig) -> Result<(Client, Server), P2pError> {
+pub fn new<E: EventHandler>(config: P2pConfig) -> Result<(Client, Server<E>), P2pError> {
     let (cmd_sender, cmd_receiver) = mpsc::unbounded_channel();
 
     let server = Server::new(config, cmd_receiver)?;
@@ -141,7 +141,7 @@ pub enum Command {
     GetStatus(oneshot::Sender<NodeStatus>),
 }
 
-impl Server {
+impl<E: EventHandler> Server<E> {
     /// Create a new `Server`.
     pub fn new(
         config: P2pConfig,
@@ -160,7 +160,6 @@ impl Server {
             SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build()
         };
         // Switch to server mode.
-        // TODO remove this when the mode can be configured.
         swarm.add_external_address(addr.clone());
         swarm.listen_on(addr)?;
 
@@ -187,8 +186,8 @@ impl Server {
     }
 
     /// Set the handler of events from remote peers.
-    pub fn set_event_handler(&mut self, handler: impl EventHandler) {
-        self.event_handler.set(Box::new(handler)).unwrap();
+    pub fn set_event_handler(&mut self, handler: E) {
+        self.event_handler.set(handler).unwrap();
     }
 
     /// Run the `Server`.
