@@ -9,7 +9,7 @@
 - [04 | 钱包: 签名与验签](doc/04-wallet.md)
 - [05 | 读取命令行与配置文件](doc/05-cmd-config.md)
 - [06 | libp2p: 需求分析与封装思路](doc/06-libp2p.md)
-- [07 | tinyp2p：封装复杂性](doc/07-tinyp2p.md)
+- [07 | tinyp2p：基于 CSP 的无锁并发模型](doc/07-tinyp2p.md)
 - [08 | 网络层](doc/08-network.md)
 - [09 | 业务层](doc/09-biz.md)
 - [10 | 存储层](doc/10-data.md)
