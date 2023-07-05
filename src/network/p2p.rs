@@ -85,16 +85,16 @@ impl PeerClient for P2pClient {
 }
 
 #[derive(Debug, Clone)]
-pub struct EventHandlerImpl<S: State>(Node<S, P2pClient>);
+pub struct EventHandlerImpl<S: State>(Node<S>);
 
 impl<S: State> EventHandlerImpl<S> {
-    pub fn new(node: Node<S, P2pClient>) -> Self {
+    pub fn new(node: Node<S>) -> Self {
         Self(node)
     }
 }
 
 impl<S: State> Deref for EventHandlerImpl<S> {
-    type Target = Node<S, P2pClient>;
+    type Target = Node<S>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -134,7 +134,7 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
             Topic::Block => {
                 if let Ok(block) = Block::try_from(message) {
                     info!("📣 >> [P2P-IN-BROADCAST] {}", block);
-                    self.add_block_stop_mining(block);
+                    self.handle_broadcast_block(block);
                 } else {
                     error!("❌ >> [P2P-IN-BROADCAST] Invalid block");
                 }
@@ -142,7 +142,7 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
             Topic::Tx => {
                 if let Ok(tx) = SignedTx::try_from(message) {
                     info!("📣 >> [P2P-IN-BROADCAST] {}", tx);
-                    let _ = self.add_pending_tx(tx);
+                    self.handle_broadcast_tx(tx);
                 } else {
                     error!("❌ >> [P2P-IN-BROADCAST] Invalid tx");
                 }

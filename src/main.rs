@@ -1,4 +1,9 @@
 use clap::{Parser, Subcommand};
+use config::Config;
+use log::info;
+
+use tokio::task;
+use wallet::{self, Wallet};
 
 mod biz;
 mod config;
@@ -9,14 +14,9 @@ mod schema;
 mod types;
 mod utils;
 
-use biz::Node;
+use biz::Genesis;
 use data::MemoryState;
-use log::info;
-use network::{http, p2p::P2pClient};
-use tokio::task;
-use wallet::Wallet;
-
-use crate::{config::Config, network::p2p};
+use network::{http, p2p};
 
 /// The command of tinychain
 #[derive(Debug, Parser)]
@@ -67,15 +67,27 @@ fn new_secret_key() {
 }
 
 async fn run(config_file: &str) {
-    let cfg = Config::load(config_file).unwrap();
-    info!("📣 Config loaded: {:?}", cfg);
-    let addr = cfg.http_addr.parse().unwrap();
+    // Load config.
+    let Config {
+        genesis_file,
+        http_addr,
+        author,
+        p2p: p2p_config,
+        wallet,
+        ..
+    } = Config::load(config_file).unwrap();
+    let http_addr = http_addr.parse().unwrap();
+    let genesis = Genesis::load(&genesis_file).unwrap();
+    info!("📣 Genesis: {:?}", genesis);
 
-    let (p2p_client, mut p2p_server) = p2p::new::<MemoryState>(cfg.p2p).unwrap();
-    let node = Node::<MemoryState, P2pClient>::new(p2p_client);
+    let wallet = Wallet::new(&wallet.keystore_dir);
+    let mem_state = MemoryState::new(genesis.into_balances());
+    let (p2p_client, mut p2p_server) = p2p::new(p2p_config).unwrap();
+    let node = biz::new_node(author, mem_state, p2p_client, wallet);
+
     let event_handler = p2p::EventHandlerImpl::new(node.clone());
     p2p_server.set_event_handler(event_handler);
 
     task::spawn(p2p_server.run());
-    http::run(addr, node).await;
+    http::run(http_addr, node).await;
 }

@@ -1,0 +1,34 @@
+## The path to the data directory.
+data_dir = "./db/database/"
+## The path to the genesis file.
+genesis_file = "./genesis.json"
+## The address to listen on for HTTP Server.
+http_addr = "127.0.0.1:8000"
+## The author account to receive mining rewards.
+author = "0xb98836a093828d1c97d26eba9270a670652231e1"
+
+[wallet]
+## The path to the keystores directory.
+keystore_dir = "./db/keystore/"
+
+[p2p]
+## The address to listen on for P2P node.
+addr = "/ip4/0.0.0.0/tcp/9000"
+## Secret to generate node keypair. If not set, a random secret will be generated.
+secret = "XZYk2USPCmrRp7mCu5pT8XuQKprUf58qESu4QcQv9rJ"
+## Boot node address. If not set, the node will start as a boot node.
+# boot_node = "/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc"
+## The interval in seconds to discover the peers in the network.
+discovery_interval = 30
+## The topics to subscribe to.
+pubsub_topics = ["block", "tx"]
+
+[p2p.req_resp]
+## Connection keep-alive time in seconds.
+connection_keep_alive = 10
+## Request timeout in seconds.
+request_timeout = 10
+## Maximum request size in bytes (1MB).
+max_request_size = 1048576
+## Maximum response size in bytes (1MB).
+max_response_size = 1048576

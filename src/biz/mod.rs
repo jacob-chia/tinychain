@@ -1,74 +1,43 @@
-//! The entry point of the blockchain node.
+use std::thread;
 
-use std::{collections::HashMap, marker};
+use crossbeam_channel::unbounded;
+use wallet::Wallet;
 
+mod genesis;
+mod miner;
+mod node;
 mod peer_client;
 mod state;
+mod syncer;
 
-pub use peer_client::*;
-pub use state::*;
+pub use self::{genesis::*, node::*, peer_client::*, state::*};
+use self::{miner::Miner, syncer::Syncer};
 
-use crate::{
-    error::Error,
-    schema::{Block, SignedTx},
-    types::Hash,
-};
+const MINING_DIFFICULTY: usize = 2;
 
-#[derive(Debug, Clone)]
-pub struct Node<S: State, P: PeerClient> {
-    _marker: marker::PhantomData<(S, P)>,
-}
+/// When new a node, we need to start the miner and the syncer in the background.
+pub fn new_node<S: State, P: PeerClient>(
+    author: String,
+    state: S,
+    peer_client: P,
+    wallet: Wallet,
+) -> Node<S> {
+    let (tx_sender, tx_receiver) = unbounded();
+    let (block_sender, block_receiver) = unbounded();
 
-impl<S: State, P: PeerClient> Node<S, P> {
-    pub fn new(_p2p_client: P) -> Self {
-        Self {
-            _marker: marker::PhantomData,
-        }
-    }
+    let mut miner = Miner::new(
+        state.clone(),
+        peer_client.clone(),
+        author,
+        MINING_DIFFICULTY,
+        tx_receiver,
+        block_receiver,
+    );
 
-    /// Get the next nouce of the given account.
-    /// The nounce is a monotonically increasing number that is used to prevent replay attacks.
-    pub fn next_account_nonce(&self, _account: &str) -> u64 {
-        todo!()
-    }
+    let syncer = Syncer::new(state.clone(), peer_client, block_sender.clone());
 
-    /// Transfer the `value` from `from` to `to`.
-    pub fn transfer(&self, _from: &str, _to: &str, _value: u64, _nonce: u64) -> Result<(), Error> {
-        todo!()
-    }
+    thread::spawn(move || miner.mine());
+    thread::spawn(move || syncer.sync());
 
-    /// Get blocks from the given number.
-    pub fn get_blocks(&self, _from_number: u64) -> Vec<Block> {
-        todo!()
-    }
-
-    /// Get the block by the given number.
-    pub fn get_block(&self, _number: u64) -> Option<Block> {
-        todo!()
-    }
-
-    /// Get all the balances of the accounts.
-    pub fn get_balances(&self) -> HashMap<String, u64> {
-        todo!()
-    }
-
-    /// Get the block height.
-    pub fn block_height(&self) -> u64 {
-        todo!()
-    }
-
-    /// Get the last block hash.
-    pub fn last_block_hash(&self) -> Option<Hash> {
-        todo!()
-    }
-
-    /// Add a pending transaction to the transaction pool.
-    pub fn add_pending_tx(&self, _tx: SignedTx) -> Result<(), Error> {
-        todo!()
-    }
-
-    /// Add a block and stop the current mining process.
-    pub fn add_block_stop_mining(&self, _block: Block) {
-        todo!()
-    }
+    Node::new(state, wallet, tx_sender, block_sender)
 }
