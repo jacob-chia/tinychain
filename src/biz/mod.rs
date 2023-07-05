@@ -142,6 +142,13 @@ impl<S: State, P: PeerClient> NodeInner<S, P> {
         Ok(())
     }
 
+    /// Add a block and stop the current mining process.
+    pub fn add_block_stop_mining(&self, block: Block) {
+        if self.add_block(block).is_ok() {
+            self.cancel_signal_s.send(()).unwrap();
+        }
+    }
+
     fn remove_mined_txs(&self, block: &Block) {
         for tx in &block.txs {
             self.pending_txs.remove(&tx.hash());

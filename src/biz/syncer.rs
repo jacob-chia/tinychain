@@ -34,13 +34,6 @@ impl<S: State, P: PeerClient> NodeInner<S, P> {
         }
     }
 
-    /// Add a block and stop the current mining process.
-    pub fn add_block_stop_mining(&self, block: Block) {
-        if self.add_block(block).is_ok() {
-            self.cancel_signal_s.send(()).unwrap();
-        }
-    }
-
     fn get_best_peer(&self, local_height: u64) -> Option<String> {
         let (mut best_peer, mut best_height) = (None, local_height);
         let peers = self.peer_client.known_peers();
