@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use crossbeam_channel::Sender;
 use wallet::Wallet;
@@ -9,6 +9,37 @@ use super::{miner::TxMsg, State};
 
 #[derive(Debug, Clone)]
 pub struct Node<S: State> {
+    inner: Arc<NodeInner<S>>,
+}
+
+impl<S: State> Node<S> {
+    pub fn new(
+        state: S,
+        wallet: Wallet,
+        tx_sender: Sender<TxMsg>,
+        block_sender: Sender<Block>,
+    ) -> Self {
+        Self {
+            inner: Arc::new(NodeInner {
+                state,
+                wallet,
+                tx_sender,
+                block_sender,
+            }),
+        }
+    }
+}
+
+impl<S: State> Deref for Node<S> {
+    type Target = NodeInner<S>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct NodeInner<S: State> {
     // A state machine that holds the state of the blockchain.
     state: S,
     // A channel to send a signed transaction to the miner.
@@ -23,20 +54,6 @@ pub struct Node<S: State> {
 }
 
 impl<S: State> Node<S> {
-    pub fn new(
-        state: S,
-        wallet: Wallet,
-        tx_sender: Sender<TxMsg>,
-        block_sender: Sender<Block>,
-    ) -> Self {
-        Self {
-            state,
-            tx_sender,
-            block_sender,
-            wallet,
-        }
-    }
-
     /// Get the next nouce of the given account.
     /// The nounce is a monotonically increasing number that is used to prevent replay attacks.
     pub fn next_account_nonce(&self, account: &str) -> u64 {
