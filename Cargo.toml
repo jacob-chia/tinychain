@@ -41,7 +41,6 @@ tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 clap = { version = "4.3", features = ["derive"] }
 toml = "0.7"
 dashmap = "5.4"
-reqwest = { version = "0.11", features = ["blocking", "json"] }
 axum = { version = "0.6", features = ["default", "macros"] }
 rand = "0.8"
 prost = "0.11"

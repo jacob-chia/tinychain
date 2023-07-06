@@ -55,7 +55,7 @@ mod tests {
         assert_eq!(data_dir, "./db/database/");
         assert_eq!(genesis_file, "./genesis.json");
         assert_eq!(http_addr, "127.0.0.1:8000");
-        assert_eq!(miner, "0xb98836a093828d1c97d26eba9270a670652231e1");
+        assert_eq!(miner, "0x8d1cbb757610619d74fdca9ee008a007a633a71e");
         assert_eq!(wallet.keystore_dir, "./db/keystore/");
 
         let P2pConfig {

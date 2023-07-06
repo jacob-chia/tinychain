@@ -35,7 +35,7 @@ pub fn is_valid_hash(hash: &Hash, mining_difficulty: usize) -> bool {
     hash_prefix[..] == hash[..mining_difficulty]
 }
 
-pub fn verify_tx(tx: &SignedTx) -> Result<(), Error> {
+pub fn verify_tx_signature(tx: &SignedTx) -> Result<(), Error> {
     let sig = Signature::from(tx.sig.clone());
     wallet::verify_signature(&tx.as_bytes(), sig)?;
     Ok(())

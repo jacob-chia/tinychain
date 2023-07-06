@@ -1,8 +1,5 @@
-use std::thread;
-
 use clap::{Parser, Subcommand};
 use config::Config;
-use crossbeam_channel::unbounded;
 use log::info;
 
 use tokio::task;
@@ -17,11 +14,9 @@ mod schema;
 mod types;
 mod utils;
 
-use biz::{Genesis, Node};
+use biz::Genesis;
 use data::SledState;
 use network::{http, p2p};
-
-const MINING_DIFFICULTY: usize = 2;
 
 /// The command of tinychain
 #[derive(Debug, Parser)]
@@ -85,30 +80,13 @@ async fn run(config_file: &str) {
     let genesis = Genesis::load(&genesis_file).unwrap();
     info!("📣 Genesis: {:?}", genesis);
 
-    // When receiving a new block from other peers, a signal will be sent to the miner to stop mining.
-    let (cancel_signal_s, cancel_signal_r) = unbounded();
-
-    // Create a new node.
     let wallet = Wallet::new(&wallet.keystore_dir);
-    let sled_state = SledState::new(&data_dir, genesis.into_balances(), MINING_DIFFICULTY).unwrap();
+    let sled_state = SledState::new(&data_dir, genesis.into_balances()).unwrap();
     let (p2p_client, mut p2p_server) = p2p::new(p2p_config).unwrap();
-    let node = Node::new(
-        author,
-        sled_state,
-        p2p_client,
-        wallet,
-        cancel_signal_s,
-        MINING_DIFFICULTY,
-    )
-    .unwrap();
+    let node = biz::new_node(author, sled_state, p2p_client, wallet);
     let event_handler = p2p::EventHandlerImpl::new(node.clone());
     p2p_server.set_event_handler(event_handler);
 
-    let miner = node.clone();
-    let syncer = node.clone();
-
     task::spawn(p2p_server.run());
-    task::spawn(http::run(http_addr, node));
-    thread::spawn(move || syncer.sync());
-    miner.mine(cancel_signal_r)
+    http::run(http_addr, node).await;
 }
