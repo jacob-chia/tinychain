@@ -16,23 +16,24 @@ use super::*;
 use crate::{
     error::Error,
     schema::{Block, SignedTx},
+    types::Hash,
     utils,
 };
 
-const MINE_INTERVAL: u64 = 30;
+const MINE_INTERVAL: u64 = 20;
 
 /// A transaction may be from users or from other peers.
-/// Only the transactions from users need to be broadcasted to other peers.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TxMsg {
     pub tx: SignedTx,
+    /// Transactions from users need to be broadcasted.
     pub need_broadcast: bool,
 }
 
 #[derive(Debug)]
 pub struct Miner<S: State, P: PeerClient> {
     /// The pending transactions that are not yet included in a block.
-    pending_txs: Vec<SignedTx>,
+    pending_txs: HashMap<Hash, SignedTx>,
     /// The pending state that is used to check if a transaction is valid.
     pending_state: PendingState,
     /// The mining difficulty of the blockchain.
@@ -67,7 +68,7 @@ impl<S: State, P: PeerClient> Miner<S, P> {
         block_receiver: Receiver<Block>,
     ) -> Self {
         let mut state = Self {
-            pending_txs: Vec::new(),
+            pending_txs: HashMap::new(),
             pending_state: PendingState::default(),
             mining_difficulty,
             state,
@@ -102,7 +103,7 @@ impl<S: State, P: PeerClient> Miner<S, P> {
                         self.state.last_block_hash().unwrap_or_default(),
                         self.state.block_height(),
                         self.author.clone(),
-                        self.pending_txs.clone(),
+                        self.get_sorted_txs(),
                     );
 
                     if let Some(block) = self.pow(block) {
@@ -166,7 +167,7 @@ impl<S: State, P: PeerClient> Miner<S, P> {
         let from_balance = self.get_pending_balance(&tx.from);
         if from_balance < tx.cost() {
             return Err(Error::BalanceInsufficient(
-                tx.from.to_string(),
+                tx.from.clone(),
                 from_balance,
                 tx.cost(),
             ));
@@ -175,7 +176,7 @@ impl<S: State, P: PeerClient> Miner<S, P> {
         let expected_nonce = self.get_pending_nonce(&tx.from);
         if expected_nonce != tx.nonce {
             return Err(Error::InvalidTxNonce(
-                tx.from.to_string(),
+                tx.from.clone(),
                 expected_nonce,
                 tx.nonce,
             ));
@@ -183,11 +184,7 @@ impl<S: State, P: PeerClient> Miner<S, P> {
 
         let to_balance = self.get_pending_balance(&tx.to);
         if to_balance.checked_add(tx.value).is_none() {
-            return Err(Error::BalanceOverflow(
-                tx.to.to_string(),
-                to_balance,
-                tx.value,
-            ));
+            return Err(Error::BalanceOverflow(tx.to.clone(), to_balance, tx.value));
         }
 
         Ok(())
@@ -195,23 +192,28 @@ impl<S: State, P: PeerClient> Miner<S, P> {
 
     fn update_pending_state(&mut self, tx: &SignedTx) {
         self.pending_state.balances.insert(
-            tx.from.to_string(),
+            tx.from.clone(),
             self.get_pending_balance(&tx.from) - tx.cost(),
         );
 
-        self.pending_state.balances.insert(
-            tx.to.to_string(),
-            self.get_pending_balance(&tx.to) + tx.value,
-        );
+        self.pending_state
+            .balances
+            .insert(tx.to.clone(), self.get_pending_balance(&tx.to) + tx.value);
 
         self.pending_state
             .account2nonce
-            .insert(tx.from.to_string(), tx.nonce + 1);
+            .insert(tx.from.clone(), tx.nonce + 1);
     }
 
     fn reset_pending_state(&mut self) {
+        // load from `state`
         self.pending_state.balances = self.state.get_balances();
         self.pending_state.account2nonce = self.state.get_account2nonce();
+
+        // load from `pending_txs`
+        for tx in self.get_sorted_txs() {
+            self.update_pending_state(&tx);
+        }
     }
 
     fn add_pending_tx(&mut self, tx_msg: TxMsg) {
@@ -222,9 +224,21 @@ impl<S: State, P: PeerClient> Miner<S, P> {
         }
 
         self.update_pending_state(&tx);
-        self.pending_txs.push(tx.clone());
+        self.pending_txs.insert(tx.hash(), tx.clone());
         if need_broadcast {
             self.peer_client.broadcast_tx(tx);
+        }
+    }
+
+    fn get_sorted_txs(&self) -> Vec<SignedTx> {
+        let mut txs: Vec<SignedTx> = self.pending_txs.values().cloned().collect();
+        txs.sort_by_key(|tx| tx.timestamp);
+        txs
+    }
+
+    fn remove_mined_txs(&mut self, block: &Block) {
+        for tx in &block.txs {
+            self.pending_txs.remove(&tx.hash());
         }
     }
 
@@ -258,11 +272,10 @@ impl<S: State, P: PeerClient> Miner<S, P> {
             return Err(err);
         }
 
-        let result = self.state.add_block(block);
+        let result = self.state.add_block(block.clone());
         if result.is_ok() {
-            // Once a block is added, both the pending state and pending txs are stale and should be reset.
+            self.remove_mined_txs(&block);
             self.reset_pending_state();
-            self.pending_txs.clear();
         }
 
         result

@@ -5,7 +5,7 @@ genesis_file = "./genesis.json"
 ## The address to listen on for HTTP Server.
 http_addr = "127.0.0.1:8002"
 ## The author address to receive mining rewards.
-author = "0xddc678d21a998a6332e211f1a5c7c4db3a2632d5"
+author = "0x0bbdab8c4908d1bf58ca21d1316dd604dbad0197"
 
 [wallet]
 ## The path to the keystores directory.

@@ -23,7 +23,6 @@ pub struct Node<S: State> {
 }
 
 impl<S: State> Node<S> {
-    /// Create a new node with the given miner address and state.
     pub fn new(
         state: S,
         wallet: Wallet,
@@ -44,7 +43,6 @@ impl<S: State> Node<S> {
         self.state.next_account_nonce(account)
     }
 
-    /// Transfer the `value` from `from` to `to`.
     pub fn transfer(&self, from: &str, to: &str, value: u64, nonce: u64) -> Result<(), Error> {
         let tx = Tx::new(from, to, value, nonce);
         let signed_tx = self.sign_tx(tx)?;
@@ -56,37 +54,30 @@ impl<S: State> Node<S> {
         Ok(())
     }
 
-    /// Get blocks from the given number.
     pub fn get_blocks(&self, from_number: u64) -> Vec<Block> {
         self.state.get_blocks(from_number)
     }
 
-    /// Get the block by the given number.
     pub fn get_block(&self, number: u64) -> Option<Block> {
         self.state.get_block(number)
     }
 
-    /// Get all the balances of the accounts.
     pub fn get_balances(&self) -> HashMap<String, u64> {
         self.state.get_balances()
     }
 
-    /// Get the block height.
     pub fn block_height(&self) -> u64 {
         self.state.block_height()
     }
 
-    /// Get the last block hash.
     pub fn last_block_hash(&self) -> Option<Hash> {
         self.state.last_block_hash()
     }
 
-    /// Handle a broadcast block message.
     pub fn handle_broadcast_block(&self, block: Block) {
         let _ = self.block_sender.send(block);
     }
 
-    /// Handle a broadcast transaction message.
     pub fn handle_broadcast_tx(&self, tx: SignedTx) {
         let _ = self.tx_sender.send(TxMsg {
             tx,

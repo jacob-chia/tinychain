@@ -57,11 +57,31 @@ impl State for MemoryState {
     }
 
     fn add_block(&self, block: Block) -> Result<(), Error> {
-        self.inner
-            .write()
-            .unwrap()
-            .blocks
-            .insert(block.number(), block);
+        let mut inner = self.inner.write().unwrap();
+        for tx in &block.txs {
+            // update `from` balance & nonce
+            let from_balance = inner.balances.get(&tx.from).cloned().unwrap_or_default();
+            inner
+                .balances
+                .insert(tx.from.clone(), from_balance - tx.cost());
+            inner.account2nonce.insert(tx.from.clone(), tx.nonce + 1);
+
+            // update `to` balance
+            let to_balance = inner.balances.get(&tx.to).cloned().unwrap_or_default();
+            inner.balances.insert(tx.to.clone(), to_balance + tx.value);
+
+            // update `author` balance
+            let author_balance = inner
+                .balances
+                .get(block.author())
+                .cloned()
+                .unwrap_or_default();
+            inner
+                .balances
+                .insert(block.author().into(), author_balance + tx.gas_cost());
+        }
+
+        inner.blocks.insert(block.number(), block);
 
         Ok(())
     }

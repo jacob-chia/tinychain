@@ -8,7 +8,7 @@ use crate::schema::Block;
 
 use super::{PeerClient, State};
 
-const SYNC_INTERVAL: u64 = 29;
+const SYNC_INTERVAL: u64 = 30;
 
 #[derive(Debug)]
 pub struct Syncer<S: State, P: PeerClient> {
