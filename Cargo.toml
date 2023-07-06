@@ -48,4 +48,3 @@ prost-build = "0.11"
 
 [dev-dependencies]
 project-root = "0.2"
-tempfile = "3.6"

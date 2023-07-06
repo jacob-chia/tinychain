@@ -11,11 +11,10 @@
 - [06 | libp2p: 需求分析与封装思路](doc/06-libp2p.md)
 - [07 | tinyp2p：基于 CSP 的无锁并发模型](doc/07-tinyp2p.md)
 - [08 | 网络层](doc/08-network.md)
-- [09 | 业务层](doc/09-biz.md)
+- [09 | 业务层：在业务层如何做读写分离？](doc/09-biz.md)
 - [10 | 存储层](doc/10-data.md)
-- [11 | 集成测试、性能测试](doc/11-test.md)
-- [12 | 测量和监控](doc/12-measure-tracing.md)
-- [后记](doc/13-end.md)
+- [11 | 测量和监控](doc/11-measure-tracing.md)
+- [后记](doc/12-end.md)
 
 ## 前言
 
