@@ -15,7 +15,7 @@ mod types;
 mod utils;
 
 use biz::Genesis;
-use data::MemoryState;
+use data::SledState;
 use network::{http, p2p};
 
 /// The command of tinychain
@@ -69,22 +69,21 @@ fn new_secret_key() {
 async fn run(config_file: &str) {
     // Load config.
     let Config {
+        data_dir,
         genesis_file,
         http_addr,
         author,
         p2p: p2p_config,
         wallet,
-        ..
     } = Config::load(config_file).unwrap();
     let http_addr = http_addr.parse().unwrap();
     let genesis = Genesis::load(&genesis_file).unwrap();
     info!("📣 Genesis: {:?}", genesis);
 
     let wallet = Wallet::new(&wallet.keystore_dir);
-    let mem_state = MemoryState::new(genesis.into_balances());
+    let sled_state = SledState::new(&data_dir, genesis.into_balances()).unwrap();
     let (p2p_client, mut p2p_server) = p2p::new(p2p_config).unwrap();
-    let node = biz::new_node(author, mem_state, p2p_client, wallet);
-
+    let node = biz::new_node(author, sled_state, p2p_client, wallet);
     let event_handler = p2p::EventHandlerImpl::new(node.clone());
     p2p_server.set_event_handler(event_handler);
 

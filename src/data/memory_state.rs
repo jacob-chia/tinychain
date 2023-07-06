@@ -18,6 +18,7 @@ struct InnerState {
 }
 
 impl MemoryState {
+    #[allow(dead_code)]
     pub fn new(balances: HashMap<String, u64>) -> Self {
         let inner = InnerState {
             blocks: BTreeMap::new(),

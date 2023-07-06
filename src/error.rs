@@ -28,6 +28,8 @@ pub enum Error {
     InvalidBlockHash(Hash, usize),
     #[error(transparent)]
     InvalidReqResp(#[from] prost::DecodeError),
+    #[error("Failed to access db")]
+    DbFailure(#[from] sled::Error),
     #[error("Failed to add block to db")]
     AddBlockFailure,
 
