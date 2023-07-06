@@ -51,7 +51,7 @@ pub struct Miner<S: State, P: PeerClient> {
 }
 
 /// `PendingState` merges the current `state` and the `pending_txs`.
-/// It is used to check if a transaction is valid.
+/// It is used to check if an incoming transaction is valid.
 #[derive(Debug, Default)]
 struct PendingState {
     balances: HashMap<String, u64>,
