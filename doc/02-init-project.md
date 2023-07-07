@@ -8,7 +8,8 @@
 
 > 本文为实战课，需要切换到对应的代码分支，并配合下方的参考文档一起学习。
 >
-> - 代码分支：`git fetch && git switch 02-init-project`
+> - Repo: `https://github.com/jacob-chia/tinychain.git`
+> - 分支：`git fetch && git switch 02-init-project`
 > - [Workspace 官方文档](https://doc.rust-lang.org/cargo/reference/workspaces.html)
 > - [Pre-commit 官方文档](https://pre-commit.com/)
 > - [Github Action 官方文档](https://docs.github.com/en/actions)
@@ -179,5 +180,5 @@ jobs:
 
 ---
 
-| [< 01-架构设计：谋定而后动](./01-architecture.md) | [03-定义数据结构与接口 >](./03-data-structure-api.md) |
-| ------------------------------------------------- | ----------------------------------------------------- |
+| [< 01-架构设计](./01-architecture.md) | [03-定义数据结构与接口 >](./03-data-structure-api.md) |
+| ------------------------------------- | ----------------------------------------------------- |
