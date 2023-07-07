@@ -22,7 +22,8 @@
 
 > 本文为实战课，需要切换到对应的代码分支，并配合依赖库的文档一起学习。
 >
-> - 代码分支：`git fetch && git switch 07-tinyp2p`
+> - Repo: `https://github.com/jacob-chia/tinychain.git`
+> - 分支：`git fetch && git switch 07-tinyp2p`
 > - [rust-libp2p](https://docs.rs/libp2p/latest/libp2p/index.html): libp2p 的 Rust 实现。
 > - [rust-libp2p examples](https://github.com/libp2p/rust-libp2p/tree/master/examples): 演示了各种 protocols 如何使用，本项目用到的 protocols 示例一定要看，尤其是`file-sharing` 用的是 CSP 并发模型，本项目的代码架构就是参考了`file-sharing`的实现。
 >
@@ -40,9 +41,8 @@ tinyp2p 参考上文提到的例子`file-sharing`，使用 CSP (Communicating Se
 
 上图中，`p2p_server` 用来处理用户请求。如果是基于锁的并发模型，需要在 p2p_server 外面加一层锁，每处理一个请求就要获取一次锁，这样显然是低效的。而 CSP 模型是这样的：
 
-- `p2p_client`是只读可克隆的，内部包含一个 cmd_sender；
-- 每个用户请求克隆一个 `p2p_client`，将请求转为 `cmd` 发送到 channel 中；
-- 一个后台进程独占`mut p2p_server`，不需要获取锁，逐个从 channel 中获取 cmd 执行即可；
+- `p2p_client` 用来处理用户请求，在 `p2p_client` 内部将请求转为 `cmd` 发送到 channel 中；
+- 一个后台进程独占 `mut p2p_server`，逐个从 channel 中获取 cmd 执行；
 
 那么，用户如何获取 p2p_server 的处理结果（响应）呢？用户如何处理来自远端的请求/广播消息呢？我们分两种情况讨论：
 

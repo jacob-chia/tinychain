@@ -12,7 +12,8 @@
 
 > 本文为实战课，需要切换到对应的代码分支，并配合依赖库的文档一起学习。
 >
-> - 代码分支：`git fetch && git switch 08-network`
+> - Repo: `https://github.com/jacob-chia/tinychain.git`
+> - 分支：`git fetch && git switch 08-network`
 > - [axum](https://docs.rs/axum/latest/axum/): HTTP Server 框架，由 tokio 团队维护
 >
 > 其他 crates 使用简单，不再一一列举，清单在`Cargo.toml`中
@@ -80,20 +81,11 @@ impl PeerClient for P2pClient {
 // src/network/p2p.rs 只保留了核心代码
 
 #[derive(Debug, Clone)]
-pub struct EventHandlerImpl<S: State>(Node<S, P2pClient>);
-
-impl<S: State> Deref for EventHandlerImpl<S> {
-    type Target = Node<S, P2pClient>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+pub struct EventHandlerImpl<S: State>(Node<S>);
 
 impl<S: State> EventHandler for EventHandlerImpl<S> {
     fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, P2pError> {
         let req = Request::try_from(request).unwrap();
-
         let resp = match req.method() {
             Method::Height => {
                 let block_height = self.block_height();
@@ -115,12 +107,12 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
         match Topic::from(topic) {
             Topic::Block => {
                 if let Ok(block) = Block::try_from(message) {
-                    self.add_block_stop_mining(block);
+                    self.handle_broadcast_block(block);
                 }
             }
             Topic::Tx => {
                 if let Ok(tx) = SignedTx::try_from(message) {
-                    let _ = self.add_pending_tx(tx);
+                    self.handle_broadcast_tx(tx);
                 }
             }
         }
@@ -134,8 +126,8 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
 
 - `self.block_height()`
 - `self.get_blocks(req.from_number)`
-- `self.add_block_stop_mining(block)`
-- `self.add_pending_tx(tx);`
+- `self.handle_broadcast_block(block)`
+- `self.handle_broadcast_tx(tx)`
 
 ## 2 HTTP
 
@@ -194,9 +186,9 @@ impl IntoResponse for HttpError {
 
 写完 network 我们再次体会到了 network 的作用：做类型转换和接口转发，不包含业务逻辑，目的是将 biz 与外部环境解耦，提升 biz 的稳定性。
 
-另外，我们还识别出了 biz::Node 的接口，为下节课的工作理清了思路。
+另外，我们还识别出了 biz::Node 的接口，为下节课实现 biz 层打下了基础。
 
 ---
 
-| [< 07-tinyp2p：基于 CSP 的无锁并发模型](./07-tinyp2p.md) | [09-业务层 >](./09-biz.md) |
-| -------------------------------------------------------- | -------------------------- |
+| [< 07-tinyp2p：基于 CSP 的无锁并发模型](./07-tinyp2p.md) | [09-业务层：在业务层如何做读写分离？ >](./09-biz.md) |
+| -------------------------------------------------------- | ---------------------------------------------------- |

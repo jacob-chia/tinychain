@@ -1,4 +1,4 @@
-- [01 | 架构设计：谋定而后动](#01--架构设计谋定而后动)
+- [01 | 架构设计](#01--架构设计)
   - [1 当你在做架构时，你在做什么？](#1-当你在做架构时你在做什么)
   - [2 按职责分层](#2-按职责分层)
   - [3 数据结构](#3-数据结构)
@@ -8,9 +8,10 @@
     - [4.3 存储层接口](#43-存储层接口)
   - [5 小结](#5-小结)
 
-# 01 | 架构设计：谋定而后动
+# 01 | 架构设计
 
-> 相关代码分支：`git fetch && git switch 01-architecture`
+> - Repo: `https://github.com/jacob-chia/tinychain.git`
+> - 分支：`git fetch && git switch 01-architecture`
 
 ## 1 当你在做架构时，你在做什么？
 
@@ -56,10 +57,9 @@
 
 - `网络层（network）`：负责与外界交互，包括处理 HTTP 请求和与其他 Peer 交互
 - ⭐`业务层（biz）`：基于**依赖倒置**的原则，需要使用 network 和 data 提供的功能，但不依赖它们，而是让它们依赖自己。
-  - `Node`: 负责核心业务逻辑
-  - `trait PeerClient`: Node 需要通过 p2p 向其他节点发送数据。但 Node 不依赖网络层，而是通过`trait PeerClient`定义 p2p 的行为，然后由 p2p 实现该 trait。
-  - `trait State`: Node 需要通过存储层保存本地状态，但不依赖存储层，而是通过`trait State`定义存储层的行为，由存储层实现该 trait。
-- `存储层（data）`：实现 trait State 定义的接口。
+  - `trait PeerClient`: biz 需要通过 p2p 向其他节点发送数据。但 biz 不依赖网络层，而是通过`trait PeerClient`定义 p2p 的行为，然后由 p2p 实现该 trait。
+  - `trait State`: biz 需要通过存储层保存本地状态，但不依赖存储层，而是通过`trait State`定义存储层的行为，由存储层实现该 trait。
+- `存储层（data）`：实现 biz 定义的 trait State。
 
 ## 3 数据结构
 
@@ -168,7 +168,6 @@ message BlocksResp {
 1. P2P 作为客户端，在 Node 节点中使用。由业务层通过 `trait PeerClient` 来定义 P2P 的行为，trait 定义如下：
 
 ```rs
-/// PeerClient is a trait that defines the behaviour of a peer client.
 pub trait PeerClient: Debug + Clone + Send + Sync + 'static {
     /// Return the peers (base58 encoded peer ids) that this node knows about.
     fn known_peers(&self) -> Vec<String>;
@@ -192,7 +191,6 @@ pub trait PeerClient: Debug + Clone + Send + Sync + 'static {
 2. P2P 作为服务端，需要处理来自其他节点的数据，这部分功能由 网络层 + tinyp2p 实现。我们现阶段不需要考虑内部细节，只需要知道，tinyp2p 自己不处理业务数据，而是通过注册一系列事件处理函数 `event_handlers`，当收到其他节点的数据时，调用这些 `event_handlers` 来处理。这些 event_handlers 由 tinyp2p 定义在`trait EventHandler`中，将来由网络层的`p2p`模块实现：
 
 ```rs
-/// `EventHandler` is the trait that defines how to handle requests / broadcast-messages from remote peers.
 pub trait EventHandler: Debug + Send + 'static {
     /// Handles an inbound request from a remote peer.
     fn handle_inbound_request(&self, request: Vec<u8>) -> Result<Vec<u8>, P2pError>;
@@ -207,7 +205,6 @@ pub trait EventHandler: Debug + Send + 'static {
 正如上文所说，存储层的行为由业务层定义在`trait State`中：
 
 ```rs
-/// State is a trait that defines the behaviour of a state.
 pub trait State: Debug + Clone + Send + Sync + 'static {
     /// Current block height.
     fn block_height(&self) -> u64;
@@ -215,11 +212,11 @@ pub trait State: Debug + Clone + Send + Sync + 'static {
     /// Next account nonce to be used.
     fn next_account_nonce(&self, account: &str) -> u64;
 
-    /// Get the last block.
-    fn last_block(&self) -> Option<Block>;
+    /// Get the last block hash.
+    fn last_block_hash(&self) -> Option<Hash>;
 
     /// Add a block to the state.
-    fn add_block(&self, block: Block) -> Result<Hash, Error>;
+    fn add_block(&self, block: Block) -> Result<(), Error>;
 
     /// Get blocks, starting from the `from_number`.
     fn get_blocks(&self, from_number: u64) -> Vec<Block>;
@@ -230,8 +227,11 @@ pub trait State: Debug + Clone + Send + Sync + 'static {
     /// Get the balance of the account.
     fn get_balance(&self, account: &str) -> u64;
 
-    /// Get all the balances for debugging.
+    /// Get all the balances.
     fn get_balances(&self) -> HashMap<String, u64>;
+
+    /// Get all the nonces of the accounts.
+    fn get_account2nonce(&self) -> HashMap<String, u64>;
 }
 ```
 
@@ -243,5 +243,5 @@ pub trait State: Debug + Clone + Send + Sync + 'static {
 
 ---
 
-| [< 00-前言](../README.md) | [02-项目初始化：Pre-commit Hooks 与 Github Action >](./02-init-project.md) |
+| [< 00-概览](../README.md) | [02-项目初始化：Pre-commit Hooks 与 Github Action >](./02-init-project.md) |
 | ------------------------- | -------------------------------------------------------------------------- |
