@@ -4,7 +4,7 @@ data_dir = "./db/database/"
 genesis_file = "./genesis.json"
 ## The address to listen on for HTTP Server.
 http_addr = "127.0.0.1:8000"
-## The miner account to receive mining rewards.
+## The author account to receive mining rewards.
 author = "0x8d1cbb757610619d74fdca9ee008a007a633a71e"
 
 [wallet]
@@ -17,7 +17,7 @@ addr = "/ip4/0.0.0.0/tcp/9000"
 ## Secret to generate node keypair. If not set, a random secret will be generated.
 secret = "XZYk2USPCmrRp7mCu5pT8XuQKprUf58qESu4QcQv9rJ"
 ## Boot node address. If not set, the node will start as a boot node.
-boot_node = "/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc"
+# boot_node = "/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc"
 ## The interval in seconds to discover the peers in the network.
 discovery_interval = 30
 ## The topics to subscribe to.

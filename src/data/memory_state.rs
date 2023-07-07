@@ -14,11 +14,11 @@ impl State for MemoryState {
         todo!()
     }
 
-    fn last_block(&self) -> Option<Block> {
+    fn last_block_hash(&self) -> Option<Hash> {
         todo!()
     }
 
-    fn add_block(&self, _block: Block) -> Result<Hash, Error> {
+    fn add_block(&self, _block: Block) -> Result<(), Error> {
         todo!()
     }
 
@@ -35,6 +35,10 @@ impl State for MemoryState {
     }
 
     fn get_balances(&self) -> HashMap<String, u64> {
+        todo!()
+    }
+
+    fn get_account2nonce(&self) -> HashMap<String, u64> {
         todo!()
     }
 }

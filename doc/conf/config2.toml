@@ -1,21 +1,21 @@
 ## The path to the data directory.
-data_dir = "./db/database/"
+data_dir = "./db2/database/"
 ## The path to the genesis file.
 genesis_file = "./genesis.json"
 ## The address to listen on for HTTP Server.
-http_addr = "127.0.0.1:8000"
-## The miner account to receive mining rewards.
-author = "0x8d1cbb757610619d74fdca9ee008a007a633a71e"
+http_addr = "127.0.0.1:8002"
+## The author address to receive mining rewards.
+author = "0x0bbdab8c4908d1bf58ca21d1316dd604dbad0197"
 
 [wallet]
 ## The path to the keystores directory.
-keystore_dir = "./db/keystore/"
+keystore_dir = "./db2/keystore/"
 
 [p2p]
 ## The address to listen on for P2P node.
-addr = "/ip4/0.0.0.0/tcp/9000"
+addr = "/ip4/0.0.0.0/tcp/9002"
 ## Secret to generate node keypair. If not set, a random secret will be generated.
-secret = "XZYk2USPCmrRp7mCu5pT8XuQKprUf58qESu4QcQv9rJ"
+secret = "AEFv5UZgJmzoqm8xd8qhKpinqnHmSkGDDfwr4DmP5eYC"
 ## Boot node address. If not set, the node will start as a boot node.
 boot_node = "/ip4/127.0.0.1/tcp/9000/p2p/12D3KooWSoC2ngFnfgSZcyJibKmZ2G58kbFcpmSPSSvDxeqkBLJc"
 ## The interval in seconds to discover the peers in the network.
