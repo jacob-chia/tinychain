@@ -5,6 +5,7 @@ use crate::error::Error;
 use super::*;
 
 impl Request {
+    /// Build a new request to get the block height.
     pub fn new_block_height_req() -> Self {
         Self {
             method: Method::Height as i32,
@@ -12,6 +13,7 @@ impl Request {
         }
     }
 
+    /// Build a new request to get blocks from the given number.
     pub fn new_blocks_req(from_number: u64) -> Self {
         Self {
             method: Method::Blocks as i32,
@@ -21,6 +23,7 @@ impl Request {
 }
 
 impl Response {
+    /// Build a new response to get the block height.
     pub fn new_block_height_resp(block_height: u64) -> Self {
         Self {
             method: Method::Height as i32,
@@ -30,6 +33,7 @@ impl Response {
         }
     }
 
+    /// Build a new response to get blocks.
     pub fn new_blocks_resp(blocks: Vec<Block>) -> Self {
         Self {
             method: Method::Blocks as i32,

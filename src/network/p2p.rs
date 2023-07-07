@@ -48,8 +48,6 @@ impl Deref for P2pClient {
 impl PeerClient for P2pClient {
     fn known_peers(&self) -> Vec<String> {
         let peers = self.get_known_peers();
-        // Getting self known peers doesn't involve any network calls,
-        // so the log is not tagged with `[IN]/[OUT]`.
         info!("📣 Known peers {:?}", peers);
         peers
     }

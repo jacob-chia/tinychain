@@ -20,8 +20,6 @@ pub enum Error {
     InvalidTxNonce(String, u64, u64),
     #[error("Balance of '{0}' is insufficient: balance '{1}', cost '{2}'")]
     BalanceInsufficient(String, u64, u64),
-    #[error("Balance of '{0}' is overflow: balance '{1}', received '{2}'")]
-    BalanceOverflow(String, u64, u64),
     #[error("Invalid block number: expected '{0}', not '{1}'")]
     InvalidBlockNumber(u64, u64),
     #[error("Invalid block parent: expected '{0}', not '{1}'")]

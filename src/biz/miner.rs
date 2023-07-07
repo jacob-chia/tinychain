@@ -182,11 +182,6 @@ impl<S: State, P: PeerClient> Miner<S, P> {
             ));
         }
 
-        let to_balance = self.get_pending_balance(&tx.to);
-        if to_balance.checked_add(tx.value).is_none() {
-            return Err(Error::BalanceOverflow(tx.to.clone(), to_balance, tx.value));
-        }
-
         Ok(())
     }
 

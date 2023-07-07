@@ -1,6 +1,6 @@
 //! Signature type for transactions.
 //!
-//! A signature is a 65-byte array, where the first 64 bytes is the `ecdsa::Signature`,
+//! A signature is a 65-byte array, where the first 64 bytes is the `ecdsa::Signature<Secp256k1>`,
 //! and the last byte is the `ecdsa::RecoveryId`.
 
 use std::ops::Deref;
@@ -11,14 +11,6 @@ use crate::WalletError;
 
 #[derive(Clone, Copy)]
 pub struct Signature([u8; 65]);
-
-impl Deref for Signature {
-    type Target = [u8; 65];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 impl From<(ecdsa::Signature, ecdsa::RecoveryId)> for Signature {
     fn from((sig, recid): (ecdsa::Signature, ecdsa::RecoveryId)) -> Self {
@@ -39,6 +31,14 @@ impl TryFrom<Signature> for (ecdsa::Signature, ecdsa::RecoveryId) {
         let recid = ecdsa::RecoveryId::from_byte(value[64]).ok_or(WalletError::InvalidSignature)?;
 
         Ok((sig, recid))
+    }
+}
+
+impl Deref for Signature {
+    type Target = [u8; 65];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
