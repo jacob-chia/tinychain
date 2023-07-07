@@ -10,7 +10,8 @@
 
 > 本文为实战课，需要切换到对应的代码分支，并配合依赖库的文档一起学习。
 >
-> - 代码分支：`git fetch && git switch 04-wallet`
+> - Repo: `https://github.com/jacob-chia/tinychain.git`
+> - 分支：`git fetch && git switch 04-wallet`
 > - [sled](https://docs.rs/sled/latest/sled/): 纯 Rust 编写的嵌入式 KV store， 对标 RocksDB
 > - [k256](https://docs.rs/k256/latest/k256/): secp256k1 (K-256) 椭圆曲线
 >

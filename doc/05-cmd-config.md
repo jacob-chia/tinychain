@@ -8,7 +8,8 @@
 
 > 本文为实战课，需要切换到对应的代码分支，并配合依赖库的文档一起学习。
 >
-> - 代码分支：`git fetch && git switch 05-cmd-config`
+> - Repo: `https://github.com/jacob-chia/tinychain.git`
+> - 分支：`git fetch && git switch 05-cmd-config`
 > - [clap](https://docs.rs/clap/latest/clap/): 解析命令行
 > - [toml](https://docs.rs/toml/latest/toml/): 解析配置文件
 
@@ -115,14 +116,26 @@ impl Config {
 > 注意：代码中的日志级别是`info`，所以我们运行时要加上`RUST_LOG=info`参数
 
 1. 编译：`cargo build`;
+   <<<<<<< HEAD
 2. 查看有哪些命令：`RUST_LOG=info ./target/debug/tinychain`，运行效果如下：
    ![](img/05-cmd-help.png)
 
 3. 创建账户：`RUST_LOG=info ./target/debug/tinychain new-account`，运行效果如下：
    ![](img/05-cmd-new-account.png)
 
-4. 运行服务：`RUST_LOG=info ./target/debug/tinychain run -c ./config-template.toml`，运行效果如下：
-   ![](img/05-cmd-run.png)
+4. # 运行服务：`RUST_LOG=info ./target/debug/tinychain run -c ./config-template.toml`，运行效果如下：
+5. 查看有哪些命令：`RUST_LOG=info ./target/debug/tinychain`：
+
+   ![](img/05-cmd-help.png)
+
+6. 创建账户：`RUST_LOG=info ./target/debug/tinychain new-account`：
+
+   ![](img/05-cmd-new-account.png)
+
+7. 运行服务：`RUST_LOG=info ./target/debug/tinychain run -c ./config-template.toml`：
+
+> > > > > > > 04-wallet
+> > > > > > > ![](img/05-cmd-run.png)
 
 ## 4 小结
 
