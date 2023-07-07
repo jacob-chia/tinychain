@@ -19,12 +19,12 @@ sled = "0.34"
 [package]
 
 name = "tinychain"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
-wallet = { version = "0.1.0", path = "wallet" }
-tinyp2p = { version = "0.1.0", path = "tinyp2p" }
+wallet = { version = "1.0.0", path = "wallet" }
+tinyp2p = { version = "1.0.0", path = "tinyp2p" }
 
 thiserror.workspace = true
 log.workspace = true
