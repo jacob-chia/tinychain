@@ -22,7 +22,8 @@
 
 > 本文为实战课，需要切换到对应的代码分支，并配合依赖库的文档一起学习。
 >
-> - 代码分支：`git fetch && git switch 06-libp2p`
+> - Repo: `https://github.com/jacob-chia/tinychain.git`
+> - 分支：`git fetch && git switch 06-libp2p`
 > - [libp2p 官网](https://docs.libp2p.io/concepts/introduction/overview/)：非常重要，会解释非常多的新概念，是学习 libp2p 的第一课。
 > - [libp2p spec](https://github.com/libp2p/specs)：这个是比官网更详细的开发指导手册，所有语言的实现都基于这个 specs。
 > - [rust-libp2p](https://docs.rs/libp2p/latest/libp2p/index.html): libp2p 的 Rust 实现。

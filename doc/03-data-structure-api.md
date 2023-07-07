@@ -16,7 +16,8 @@
 
 > 本文为实战课，需要切换到对应的代码分支，并配合依赖库的文档一起学习。
 >
-> - 代码分支：`git fetch && git switch 03-data-structure-api`
+> - Repo: `https://github.com/jacob-chia/tinychain.git`
+> - 分支：`git fetch && git switch 03-data-structure-api`
 > - [axum](https://docs.rs/axum/latest/axum/): HTTP Server 框架，由 tokio 团队维护
 > - [prost](https://docs.rs/prost/latest/prost/): 用来处理 protobuf
 > - [prost-build](https://docs.rs/prost-build/latest/prost_build/): 将 protobuf 文件编译成 rust 文件
