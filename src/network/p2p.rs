@@ -134,7 +134,7 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
             Topic::Block => {
                 if let Ok(block) = Block::try_from(message) {
                     info!("📣 >> [P2P-IN-BROADCAST] {}", block);
-                    self.add_block_stop_mining(block);
+                    self.handle_broadcast_block(block);
                 } else {
                     error!("❌ >> [P2P-IN-BROADCAST] Invalid block");
                 }
@@ -142,7 +142,7 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
             Topic::Tx => {
                 if let Ok(tx) = SignedTx::try_from(message) {
                     info!("📣 >> [P2P-IN-BROADCAST] {}", tx);
-                    let _ = self.add_pending_tx(tx);
+                    let _ = self.handle_broadcast_tx(tx);
                 } else {
                     error!("❌ >> [P2P-IN-BROADCAST] Invalid tx");
                 }
