@@ -26,8 +26,6 @@
 
 ## 架构
 
-### 整体
-
 > 详见原文[01 | 架构设计](doc/01-architecture.md)
 
 ![](doc/img/01-architecture.png)
