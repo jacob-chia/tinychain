@@ -1,8 +1,10 @@
 # 跟我一起写区块链
 
+[English](README.md) | [简体中文](README_ZH.md)
+
 ## 目录
 
-- [00 | 概览](README.md)
+- [00 | 概览](README_ZH.md)
 - [01 | 架构设计](doc/zh/01-architecture.md)
 - [02 | 项目初始化：Pre-commit Hooks 与 Github Action](doc/zh/02-init-project.md)
 - [03 | 定义数据结构与接口](doc/zh/03-data-structure-api.md)

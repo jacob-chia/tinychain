@@ -27,7 +27,7 @@
 
 ## 1 架构
 
-![](img/09-biz.png)
+![](../img/09-biz.png)
 
 biz 层采用了“读写分离”的架构，注意本文谈到的“读写分离”并非数据库层面的读写分离，而是业务层的架构，也就是说，`任何线程都可以“读”，但只有一个线程能“写”`。在本项目中，主要的写操作有两个：（1）将用户转账数据添加至交易池；（2）将区块添加至数据库。从上图来看，只有 Miner 线程有写权限，其他线程需要写操作时，将数据发送给 Miner 来写，包括：
 
@@ -64,7 +64,7 @@ biz 层采用了“读写分离”的架构，注意本文谈到的“读写分�
 
 ### 3.1 Node
 
-Node 的职责是处理来自网络的请求，包括 HTTP 和 P2P，我们在上节课已识别出 Node 要实现的接口，实现非常简单，直接看源码吧：[src/biz/node.rs](../src/biz/node.rs)。这里只有一点需要说明，我们看一下 Node 结构体的定义：
+Node 的职责是处理来自网络的请求，包括 HTTP 和 P2P，我们在上节课已识别出 Node 要实现的接口，实现非常简单，直接看源码吧：[src/biz/node.rs](../../src/biz/node.rs)。这里只有一点需要说明，我们看一下 Node 结构体的定义：
 
 ```rs
 // src/biz/node.rs
@@ -92,7 +92,7 @@ pub struct NodeInner<S: State> {
 
 NodeInner 是真正提供服务的结构体，但因为需要在多线程中共享引用，所以需要在外面包一层`Arc<>`，但这个“包一层`Arc<>`”的工作不应由使用者来做，而是自己要提供，所以我们又定义了一个`Node`来封装内部的复杂性，这是 Rust 代码的常见做法。
 
-如果您觉得这么做多次一举，我可以举一个更复杂的例子。在 data 层我实现了一个`MemoryState`，用来调试 biz 的功能（将来会替换为 SledState），源码在[src/data/memory_state.rs](../src/data/memory_state.rs)，对 biz 来说，MemoryState 是“开箱即用”的，不用关心内部实现，而其实 MemoryState 是这么定义的：
+如果您觉得这么做多次一举，我可以举一个更复杂的例子。在 data 层我实现了一个`MemoryState`，用来调试 biz 的功能（将来会替换为 SledState），源码在[src/data/memory_state.rs](../../src/data/memory_state.rs)，对 biz 来说，MemoryState 是“开箱即用”的，不用关心内部实现，而其实 MemoryState 是这么定义的：
 
 ```rs
 // src/data/memory_state.rs
@@ -113,7 +113,7 @@ struct InnerState {
 
 ### 3.2 Miner
 
-Miner 的职责如下，知道了职责之后，源码看起来就轻松很多了，源码: [src/biz/miner.rs](../src/biz/miner.rs)
+Miner 的职责如下，知道了职责之后，源码看起来就轻松很多了，源码: [src/biz/miner.rs](../../src/biz/miner.rs)
 
 - 当收到来自其他线程的交易时，将交易添加至交易池 `pending_txs`;
 - 定期将`pending_txs`中的交易打包进区块，进行挖矿；
@@ -179,7 +179,7 @@ fn reset_pending_state(&mut self) {
 
 ### 3.3 Syncer
 
-Syncer 的逻辑非常简单，直接上源码： [src/biz/syncer.rs](../src/biz/syncer.rs)
+Syncer 的逻辑非常简单，直接上源码： [src/biz/syncer.rs](../../src/biz/syncer.rs)
 
 ## 4 小结
 

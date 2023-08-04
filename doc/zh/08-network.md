@@ -131,7 +131,7 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
 
 ## 2 HTTP
 
-network::http 接口的实现非常简单，都是 biz 层接口的转发，直接看源码[src/network/http/mod.rs](../src/network/http/mod.rs)吧。但有个需求：如何根据错误类型返回不同的 HTTP Status Code？
+network::http 接口的实现非常简单，都是 biz 层接口的转发，直接看源码[src/network/http/mod.rs](../../src/network/http/mod.rs)吧。但有个需求：如何根据错误类型返回不同的 HTTP Status Code？
 
 ### 2.1 根据错误类型返回 HTTP Status Code
 
