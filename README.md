@@ -1,4 +1,4 @@
-# Build A Blockchain With Rust
+# Build A Blockchain with Rust
 
 [English](README.md) | [简体中文](README_ZH.md)
 
