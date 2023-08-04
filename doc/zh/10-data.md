@@ -21,7 +21,7 @@
 
 ## 1 Sled State
 
-我们在 biz 层已经定义好了 State trait，在存储层只需要基于 Sled 实现这些接口即可。直接看源码：[src/data/sled_state.rs](../src/data/sled_state.rs)。需要注意的是，不管是 u64、String、还是结构体，在 sled 中都需要转为字节流存储。我们的结构体可以通过 protobuf 编码为字节流，但 u64 需要自己实现。代码如下：
+我们在 biz 层已经定义好了 State trait，在存储层只需要基于 Sled 实现这些接口即可。直接看源码：[src/data/sled_state.rs](../../src/data/sled_state.rs)。需要注意的是，不管是 u64、String、还是结构体，在 sled 中都需要转为字节流存储。我们的结构体可以通过 protobuf 编码为字节流，但 u64 需要自己实现。代码如下：
 
 ```rs
 // src/data/sled_state.rs
@@ -84,7 +84,7 @@ curl http://localhost:8000/blocks?from_number=0 | jq
 
 查询结果如下：
 
-![](img/10-genesis-state.png)
+![](../img/10-genesis-state.png)
 
 ### 2.5 用户转账
 
@@ -174,7 +174,7 @@ curl http://localhost:8000/blocks?from_number=0 | jq
 
 查询结果如下：
 
-![](img/10-block-state.png)
+![](../img/10-block-state.png)
 
 ## 3 小结
 
@@ -210,5 +210,5 @@ curl http://localhost:8000/blocks?from_number=0 | jq
 
 ---
 
-| [< 09-业务层：在业务层如何做读写分离？](./09-biz.md) | [目录 >](../README.md) |
-| ---------------------------------------------------- | ---------------------- |
+| [< 09-业务层：在业务层如何做读写分离？](./09-biz.md) | [目录 >](../../README_ZH.md) |
+| ---------------------------------------------------- | ---------------------------- |

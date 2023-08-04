@@ -1,83 +1,85 @@
-# 跟我一起写区块链
+# Build A Blockchain With Rust
 
-## 目录
+[English](README.md) | [简体中文](README_ZH.md)
 
-- [00 | 概览](README.md)
-- [01 | 架构设计](doc/01-architecture.md)
-- [02 | 项目初始化：Pre-commit Hooks 与 Github Action](doc/02-init-project.md)
-- [03 | 定义数据结构与接口](doc/03-data-structure-api.md)
-- [04 | 钱包: 签名与验签](doc/04-wallet.md)
-- [05 | 读取命令行与配置文件](doc/05-cmd-config.md)
-- [06 | libp2p: 需求分析与封装思路](doc/06-libp2p.md)
-- [07 | tinyp2p：基于 CSP 的无锁并发模型](doc/07-tinyp2p.md)
-- [08 | 网络层](doc/08-network.md)
-- [09 | 业务层：在业务层如何做读写分离？](doc/09-biz.md)
-- [10 | 存储层、功能演示](doc/10-data.md)
+## Table of Contents
 
-## 项目简介
+- [00 | Overview](README.md)
+- [01 | Architecture](doc/en/01-architecture.md)
+- [02 | Initialization: Pre-commit Hooks & Github Action](doc/en/02-init-project.md)
+- [03 | Defining Data Structure & API](doc/en/03-data-structure-api.md)
+- [04 | Wallet: Sign & Verify](doc/en/04-wallet.md)
+- [05 | Command Line & Config File](doc/en/05-cmd-config.md)
+- [06 | Thinking in Libp2p](doc/en/06-libp2p.md)
+- [07 | Tinyp2p: A CSP Concurrency Model](doc/en/07-tinyp2p.md)
+- [08 | Network Layer](doc/en/08-network.md)
+- [09 | Biz Layer: How to Do Read/Write Separation?](doc/en/09-biz.md)
+- [10 | Data Layer & Demo](doc/en/10-data.md)
 
-本项目旨在通过一个`分布式账本`来演示区块链的基本原理，主要功能包括：
+## Intro
 
-- 通过 `HTTP JSON API` 向用户提供`转账`、`查询`等功能；
-- 节点之间通过 `P2P` 协议进行交互，数据通过 `protobuf` 编解码，功能包括`节点发现`、`广播交易`、`广播区块`、从最佳节点（区块高度最高的节点）`同步区块`等；
-- 共识机制采用 `POW`；
-- 使用 `sled`（纯 Rust 编写的嵌入式 KV store， 对标 RocksDB）存储状态；
-- 为了方便演示，节点提供了`钱包`的`签名/验签`功能，用户发送交易时无需对交易签名，签名的动作由节点自动完成。
+This project aims to demonstrate the basic principles of blockchain through a `distributed ledger`. The main features include:
 
-## 架构
+- `HTTP JSON API` provides users with interfaces such as `transfer` and some `query` apis;
+- `P2P Protocol` is used for interaction between nodes, and data is serialized/deserialized by `protobuf`. The functions include `peer discovery`, `transaction broadcast`, `block broadcast`, and `block synchronization`;
+- `PoW` is used as the consensus mechanism;
+- `Sled`, an embedded key-value database, is used as the storage backend;
+- For the convenience of demonstration, there is a `wallet` in each node that stores the users' private keys, so that the node can sign the transaction on behalf of users.
 
-> 详见原文[01 | 架构设计](doc/01-architecture.md)
+## Architecture
+
+> See [01 | Architecture](doc/en/01-architecture.md) for details.
 
 ![](doc/img/01-architecture.png)
 
-从整体看，本项目是一个 workspace，由三个 crates 组成：`tinychain`、`tinyp2p`、和 `wallet`。
+From a holistic perspective, this project is a workspace, consisting of three crates: `tinychain`, `tinyp2p`, and `wallet`.
 
-- `tinychain`: 核心业务。
-- `tinyp2p`: 将功能繁多但很难用的 rust-libp2p 封装成功能满足本项目需求但“开箱即用”的 tinyp2p。
-- `wallet`: 生成账户私钥、签名、验签。
+- `tinychain`: core business.
+- `tinyp2p`: a tinychain-specific p2p protocol based on rust-libp2p.
+- `wallet`: user private key management.
 
-### tinychain | 依赖倒置
+### tinychain | Dependency Inversion
 
-> 详见原文[01 | 架构设计](doc/01-architecture.md)
+> See [01 | Architecture](doc/en/01-architecture.md) for details.
 
-在`tinychain`中，按职责划分为三层：
+In `tinychain`, it is divided into three layers according to responsibilities:
 
-- `网络层（network）`：负责与外界交互，包括处理 HTTP 请求和与其他 Peer 交互
-- ⭐`业务层（biz）`：基于**依赖倒置**的原则，需要使用 network 和 data 提供的功能，但不依赖它们，而是让它们依赖自己。
-  - `trait PeerClient`: biz 需要通过 p2p 向其他节点发送数据。但 biz 不依赖网络层，而是通过`trait PeerClient`定义 p2p 的行为，然后由 p2p 实现该 trait。
-  - `trait State`: biz 需要通过存储层保存本地状态，但不依赖存储层，而是通过`trait State`定义存储层的行为，由存储层实现该 trait。
-- `存储层（data）`：实现 biz 定义的 trait State。
+- `Network Layer`: responsible for interacting with the outside world, including processing HTTP requests and interacting with other peers.
+- ⭐`Biz Layer`: based on the principle of **Dependency Inversion**, it defines the behavior (traits) of the network and data layers, getting rid of the dependency on them.
+  - `trait PeerClient`: the `network` needs to implement this trait to send data to other nodes.
+  - `trait State`: the `data` needs to implement this trait to save the local state.
+- `Data Layer`: responsible for saving the state.
 
-### tinychain::biz | 在业务层读写分离
+### tinychain::biz | Read/Write Separation
 
-> 详见原文[09 | 业务层：在业务层如何做读写分离？](doc/09-biz.md)
+> See [09 | Biz Layer: How to Do Read/Write Separation?](doc/en/09-biz.md) for details.
 
 ![](doc/img/09-biz.png)
 
-biz 层通过读写分离做到了无锁编程。也就是说，`任何线程都可以“读”，但只有一个线程能“写”`。在本项目中，主要的写操作有两个：（1）将用户转账数据添加至交易池；（2）将区块添加至数据库。从上图来看，只有 Miner 线程有写权限，其他线程需要写操作时，将数据通过 channel 发送给 Miner 来写。
+The `biz` layer achieves lock-free programming through read/write separation. That is to say, any thread can "read", but only one thread can "write". In this project, there are two main write operations: (1) Adding user transfer data to the transaction pool; (2) Adding blocks to the database. From the above figure, only the `Miner` thread has write permission. When other threads need to write, they send the data to the `Miner` to write via the channel.
 
-### tinyp2p | CSP 并发模型
+### tinyp2p | CSP Concurrency Model
 
-> 详见原文[07 | tinyp2p：基于 CSP 的无锁并发模型](doc/07-tinyp2p.md)
+> See [07 | tinyp2p: A CSP Concurrency Model](doc/en/07-tinyp2p.md) for details.
 
 ![](doc/img/07-csp.png)
 
-- `p2p_client` 用来处理用户请求，在 `p2p_client` 内部将请求转为 `cmd` 发送到 channel 中；
-- 一个后台进程独占 `mut p2p_server`，逐个从 channel 中获取 cmd 执行；
-- 在 p2p_server 中，有用户注册的`event_handler`，当收到来自远端的数据时，调用`event_handler`来处理；
+- `p2p_client` is used to process user requests. In `p2p_client`, the request is converted to `cmd` and sent to the channel.
+- A background thread exclusively owns `mut p2p_server`, and gets `cmd` from the channel one by one to execute.
+- Users can register `event_handlers` in p2p_server. When data is received from a remote node, `event_handlers` are called to process the data.
 
-### 功能演示
+## Demo
 
-> 详细的演示脚本详见[10 | 存储层、功能演示](doc/10-data.md)
+> See [10 | Data Layer & Demo](doc/en/10-data.md) for details.
 
-1. 查看有哪些命令：`RUST_LOG=info ./target/debug/tinychain`：
+1. View the commands: `RUST_LOG=info ./target/debug/tinychain`：
 
    ![](doc/img/05-cmd-help.png)
 
-2. 创建账户：`RUST_LOG=info ./target/debug/tinychain new-account`：
+2. Create an account: `RUST_LOG=info ./target/debug/tinychain new-account`：
 
    ![](doc/img/05-cmd-new-account.png)
 
-3. 查询账户余额和区块信息
+3. Query account balance and block information
 
    ![](doc/img/10-block-state.png)
