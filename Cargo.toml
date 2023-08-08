@@ -1,8 +1,10 @@
 # Workspace -------------------------------
 
 [workspace]
-
 members = ["wallet", "tinyp2p"]
+
+[workspace.package]
+version = "1.0.0"
 
 [workspace.dependencies]
 thiserror = "1.0"
@@ -17,9 +19,9 @@ sled = "0.34"
 # Root Crate ----------------------------
 
 [package]
-
 name = "tinychain"
-version = "1.0.0"
+version.workspace = true
+authors = ["Jacob Chia <jacob-chia@outlook.com>"]
 edition = "2021"
 
 [dependencies]
