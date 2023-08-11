@@ -1,13 +1,14 @@
 - [03 | Defining Data Structure \& API](#03--defining-data-structure--api)
-  - [1 Defining Protobuf](#1-defining-protobuf)
-  - [2 Adding Features to Generated Structs](#2-adding-features-to-generated-structs)
-  - [3 Beautifying the Log and HTTP Response](#3-beautifying-the-log-and-http-response)
-    - [3.1 Defining a Generic Length Array](#31-defining-a-generic-length-array)
-    - [3.2 Defining JSON Serialization Format](#32-defining-json-serialization-format)
-    - [3.3 Defining Log Format](#33-defining-log-format)
-    - [3.4 Deref Trait](#34-deref-trait)
-  - [4 Defining Interfaces/Traits](#4-defining-interfacestraits)
-  - [5 Summary](#5-summary)
+  - [1 Error Handling](#1-error-handling)
+  - [2 Defining Protobuf](#2-defining-protobuf)
+  - [3 Adding Functions to Generated Structs](#3-adding-functions-to-generated-structs)
+  - [4 Beautifying the Log and HTTP Response](#4-beautifying-the-log-and-http-response)
+    - [4.1 Defining a Generic Length Array](#41-defining-a-generic-length-array)
+    - [4.2 Defining JSON Serialization Format](#42-defining-json-serialization-format)
+    - [4.3 Defining Log Format](#43-defining-log-format)
+    - [4.4 Deref Trait](#44-deref-trait)
+  - [5 Defining Interfaces/Traits](#5-defining-interfacestraits)
+  - [6 Summary](#6-summary)
 
 # 03 | Defining Data Structure & API
 
@@ -23,7 +24,42 @@
 > - [prost-build](https://docs.rs/prost-build/latest/prost_build/): build-time code generation as part of a Cargo build-script.
 > - [thiserror](https://docs.rs/thiserror/latest/thiserror/): provides a convenient derive macro for the standard library’s std::error::Error trait
 
-## 1 Defining Protobuf
+## 1 Error Handling
+
+We define a global error type `Error` in [src/error.rs](../../src/error.rs). Using `thiserror` we can easily implement the `std::error::Error` trait, and any underlying error can be easily converted to this type. Here is an example (not the actual code for now):
+
+```rs
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("Config file not exist: {0}")]
+    ConfigNotExist(String),
+    // Automatically implements the `From<toml::de::Error>` trait for `Error`.
+    #[error(transparent)]
+    InvalidConfig(#[from] toml::de::Error),
+}
+```
+
+Then, when we encounter an error, we can use `?` to automatically convert it, or use `map_err` to manually convert it, for example:
+
+```rs
+impl Config {
+    // Load config from file path.
+    pub fn load(path: &str) -> Result<Self, Error> {
+        // fs::read_to_string() returns `io::Error` when an error occurs.
+        // This error is very common, and not all IO errors should be considered as `Error::ConfigNotExist`,
+        // so we use `map_err` to manually convert the error.
+        let content =
+            fs::read_to_string(path).map_err(|_| Error::ConfigNotExist(path.to_string()))?;
+
+        // toml::from_str() returns `toml::de::Error` when an error occurs.
+        // Since our custom error implements the `From<toml::de::Error>` trait, we can use `?` to automatically convert the error type.
+        let config: Config = toml::from_str(&content)?;
+        Ok(config)
+    }
+}
+```
+
+## 2 Defining Protobuf
 
 Follow the steps below:
 
@@ -31,7 +67,7 @@ Follow the steps below:
 2. Write a build script `build.rs` in the project root directory // [build.rs](../../build.rs)
 3. Run `cargo build`, a file `src/schema/v1.rs` will be generated. Do not modify this file. // [src/schema/v1.rs](../../src/schema/v1.rs)
 
-## 2 Adding Features to Generated Structs
+## 3 Adding Functions to Generated Structs
 
 There are only the definitions of the Rust structs in `src/schema/v1.rs`. We need to add some functions to these structs for convenience. No complex logic, just look at the source code.
 
@@ -39,11 +75,11 @@ There are only the definitions of the Rust structs in `src/schema/v1.rs`. We nee
 - [src/schema/tx.rs](../../src/schema/tx.rs)
 - [src/schema/req_resp.rs](../../src/schema/req_resp.rs)
 
-## 3 Beautifying the Log and HTTP Response
+## 4 Beautifying the Log and HTTP Response
 
-Read more in `src/schema/v1.rs`. The `BlockHeader.parent_hash` and `SignedTx.sig` fields are both `Vec<u8>`. Whether printed in the logs or returned in the HTTP response, they are unreadable. Let's solve this problem.
+Also in `src/schema/v1.rs`, the `BlockHeader.parent_hash` and `SignedTx.sig` fields are both `Vec<u8>`. Whether printed in the logs or returned in the HTTP response, they are unreadable. Let's solve this problem.
 
-### 3.1 Defining a Generic Length Array
+### 4.1 Defining a Generic Length Array
 
 We need to define two types: `Hash` and `Signature`. Both types perform the same functions, but differ in the length of their byte arrays. To simplify things, we can define an array with a generic length and create two aliases.
 
@@ -58,7 +94,7 @@ pub type Signature = Bytes<65>;
 pub struct Bytes<const T: usize>([u8; T]);
 ```
 
-### 3.2 Defining JSON Serialization Format
+### 4.2 Defining JSON Serialization Format
 
 The meaning of `#[serde(try_from = "String", into = "String")]` above is: serde will serialize `Bytes` to `String`, and deserialize `String` to `Bytes`. But `Bytes` needs to implement two traits: `TryFrom<String>` and `Into<String>`:
 
@@ -90,7 +126,7 @@ impl<const T: usize> From<Bytes<T>> for String {
 
 Now we can use `Hash` and `Signature` in HTTP request/response. The corresponding code is placed in [src/network/http/dto.rs](../../src/network/http/dto.rs). There is no complexity in this section and the code can be viewed directly from the source file.
 
-### 3.3 Defining Log Format
+### 4.3 Defining Log Format
 
 ```rs
 // src/types.rs
@@ -123,10 +159,10 @@ impl<const T: usize> fmt::Display for Bytes<T> {
 
 Now we can change the log format of `Block` and `Tx`. Since prost-build automatically implements `fmt::Debug` for `Block` and `Tx`, we can only implement `fmt::Display` for them, see [src/schema/block.rs](../../src/schema/block.rs) and [src/schema/tx.rs](../../src/schema/tx.rs).
 
-### 3.4 Deref Trait
+### 4.4 Deref Trait
 
-You may have noticed that we have implemented `Deref` for `Bytes`. More information about `Deref` can be found in [the official Rust book](https://doc.rust-lang.org/book/ch15-02-deref.html).
-Deref makes `&Bytes` behave like `&[u8; T]`. See the following test code:
+You may have noticed that we have implemented `Deref` for `Bytes`. More information about `Deref` can be found in [The Official Rust Book](https://doc.rust-lang.org/book/ch15-02-deref.html).
+Simply put, `Deref` makes `&Bytes` behave like `&[u8; T]`. See the following test code:
 
 ```rs
 // src/types.rs
@@ -163,7 +199,7 @@ mod tests {
 }
 ```
 
-## 4 Defining Interfaces/Traits
+## 5 Defining Interfaces/Traits
 
 The following source files define the interfaces/traits we need. This part has no business logic, just follow the design document of the first lesson.
 
@@ -171,12 +207,12 @@ The following source files define the interfaces/traits we need. This part has n
 - trait `PeerClient`: [src/biz/peer_client.rs](../../src/biz/peer_client.rs)
 - trait `State`: [src/biz/state.rs](../../src/biz/state.rs)
 
-## 5 Summary
+## 6 Summary
 
 We learned through defining data structures and interfaces:
 
 - Using `prost` to handle Protobuf;
-- Using generics `pub struct Bytes<const T: usize>([u8; T]);` to reduce duplicate code;
+- Using generics `pub struct Bytes<const T: usize>([u8; T])` to reduce duplicate code;
 - Some important traits: `Deref`, `From`, `Debug`, and `Display`.
 
 ---
