@@ -76,7 +76,7 @@ The message signing function is based on [k256](https://docs.rs/k256/latest/k256
 
 ### 2.1 Defining A New Signature Type
 
-Note that the `wallet::Signature` in this lesson is different from the `tinychain::Signature` in the previous lesson. The `tinychain::Signature` is for better readability, while the `wallet::Signature` is used to hide complexity.
+Note that the `wallet::Signature` in this lesson is different from the `tinychain::Signature` in the last lesson. The `tinychain::Signature` is for better readability, while the `wallet::Signature` is used to hide complexity.
 
 1. Define the [wallet::Signature](../../wallet/src/signature.rs)
 

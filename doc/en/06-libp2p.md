@@ -373,9 +373,9 @@ Fortunately, we can still switch to Server mode by calling `Swarm::add_external_
 
 In order to do the Peer Discovery, we need to do five things:
 
-- Call `Swarm::add_external_address` when constructing the peer to switch to Server mode;
-- Call Bootstrap regularly;
-- Add the address to the DHT when the Identify receives node information;
+- When constructing a `Peer`, we need to execute `Swarm::add_external_address` to switch to the `Server` mode;
+- Call bootstrap regularly;
+- Add the address to the DHT when `Identify` receives node information;
 - Manually remove the node when the "Outgoing Connection Error" event is received;
 - Manually remove the node when the "Ping Error" event is received.
 
