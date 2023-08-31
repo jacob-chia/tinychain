@@ -77,17 +77,17 @@ impl Config {
 
 按照步骤操作即可：
 
-1. 按照第一课架构设计中的定义来写`src/schema/api.v1.proto` // [源码](../src/schema/api.v1.proto)
-2. 编写编译脚本，在项目根目录添加`build.rs` // [源码](../build.rs)
-3. 执行`cargo build`，会生成`src/schema/v1.rs`，不要修改这个文件。 // [源码](../src/schema/v1.rs)
+1. 按照第一课架构设计中的定义来写`src/schema/api.v1.proto` // [源码](../../src/schema/api.v1.proto)
+2. 编写编译脚本，在项目根目录添加`build.rs` // [源码](../../build.rs)
+3. 执行`cargo build`，会生成`src/schema/v1.rs`，不要修改这个文件。 // [源码](../../src/schema/v1.rs)
 
 ## 3 给生成的结构体添加一些功能
 
 在`src/schema/v1.rs`中，只有 Rust 结构体的定义，要想更方便的使用这些结构体，我们还需要添加一些功能。没有复杂逻辑，直接看源码吧。
 
-- 给`Block`添加功能：[src/schema/block.rs](../src/schema/block.rs)
-- 给`Tx`添加功能：[src/schema/tx.rs](../src/schema/tx.rs)
-- 给 p2p 的`Request/Response`附加功能：[src/schema/req_resp.rs](../src/schema/req_resp.rs)
+- 给`Block`添加功能：[src/schema/block.rs](../../src/schema/block.rs)
+- 给`Tx`添加功能：[src/schema/tx.rs](../../src/schema/tx.rs)
+- 给 p2p 的`Request/Response`附加功能：[src/schema/req_resp.rs](../../src/schema/req_resp.rs)
 
 其中有两个方法需要说明：
 
@@ -159,7 +159,7 @@ impl<const T: usize> From<Bytes<T>> for String {
 }
 ```
 
-做完这些工作后，就可以在 HTTP 的 Request/Response 中使用`Hash`和`Signature`两个类型了。JSON 格式的数据只和 http 相关，所以我把相关的代码放在了[src/network/http/dto.rs](../src/network/http/dto.rs)中，这块儿没有难点，直接跳转到源文件看代码吧。
+做完这些工作后，就可以在 HTTP 的 Request/Response 中使用`Hash`和`Signature`两个类型了。JSON 格式的数据只和 http 相关，所以我把相关的代码放在了[src/network/http/dto.rs](../../src/network/http/dto.rs)中，这块儿没有难点，直接跳转到源文件看代码吧。
 
 ### 4.3 自定义日志格式
 
@@ -192,7 +192,7 @@ impl<const T: usize> fmt::Display for Bytes<T> {
 }
 ```
 
-做完这些工作后，我们就可以修改`Block`和`Tx`的日志格式了。因为 prost-build 会自动为`Block`和`Tx`实现`fmt::Debug`，我们再实现`fmt::Debug`会报错，只能为其实现`fmt::Display`，详见源码[src/schema/block.rs](../src/schema/block.rs) 和 [src/schema/tx.rs](../src/schema/tx.rs)。
+做完这些工作后，我们就可以修改`Block`和`Tx`的日志格式了。因为 prost-build 会自动为`Block`和`Tx`实现`fmt::Debug`，我们再实现`fmt::Debug`会报错，只能为其实现`fmt::Display`，详见源码[src/schema/block.rs](../../src/schema/block.rs) 和 [src/schema/tx.rs](../../src/schema/tx.rs)。
 
 ### 4.4 Deref trait
 
@@ -239,9 +239,9 @@ mod tests {
 
 这部分没有业务逻辑，按照第一课的设计文档定义即可。
 
-- `HTTP API` 源文件：[src/network/http/mod.rs](../src/network/http/mod.rs)。全是 axum 样板代码，配合 [axum 官方文档](https://docs.rs/axum/latest/axum/) 食用。
-- `trait PeerClient` 源文件：[src/biz/peer_client.rs](../src/biz/peer_client.rs)
-- `trait State` 源文件：[src/biz/state.rs](../src/biz/state.rs)
+- `HTTP API` 源文件：[src/network/http/mod.rs](../../src/network/http/mod.rs)。全是 axum 样板代码，配合 [axum 官方文档](https://docs.rs/axum/latest/axum/) 食用。
+- `trait PeerClient` 源文件：[src/biz/peer_client.rs](../../src/biz/peer_client.rs)
+- `trait State` 源文件：[src/biz/state.rs](../../src/biz/state.rs)
 
 ## 6 小结
 
