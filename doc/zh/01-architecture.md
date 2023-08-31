@@ -40,7 +40,7 @@
 
 ## 2 按职责分层
 
-![](img/01-architecture.png)
+![](../img/01-architecture.png)
 
 在 Rust 项目中，不仅可以分层，还支持 workspace，即一个项目中包含多个 crates，这么做的好处有两个：
 
@@ -76,31 +76,31 @@ syntax = "proto3";
 package v1;
 
 message Block {
-	BlockHeader header = 1;
-	repeated SignedTx txs = 2;
+ BlockHeader header = 1;
+ repeated SignedTx txs = 2;
 }
 
 message BlockHeader {
-	bytes parent_hash = 1;
-	uint64 number = 2;
-	uint64 nonce = 3;
-	uint64 timestamp = 4;
-	string author = 5;
+ bytes parent_hash = 1;
+ uint64 number = 2;
+ uint64 nonce = 3;
+ uint64 timestamp = 4;
+ string author = 5;
 }
 
 message SignedTx {
-	Tx tx = 1;
-	bytes sig = 2;
+ Tx tx = 1;
+ bytes sig = 2;
 }
 
 message Tx {
-	string from = 1;
-	string to = 2;
-	uint64 value = 3;
-	uint64 nonce = 4;
-	uint64 gas = 5;
-	uint64 gas_price = 6;
-	uint64 timestamp = 7;
+ string from = 1;
+ string to = 2;
+ uint64 value = 3;
+ uint64 nonce = 4;
+ uint64 gas = 5;
+ uint64 gas_price = 6;
+ uint64 timestamp = 7;
 }
 ```
 
@@ -111,39 +111,39 @@ message Tx {
 ```proto
 // Request/response methods.
 enum Method {
-	HEIGHT = 0;
-	BLOCKS = 1;
+ HEIGHT = 0;
+ BLOCKS = 1;
 }
 
 message Request {
-	Method method = 1;
-	oneof body {
-		BlockHeightReq block_height_req = 2;
-		BlocksReq blocks_req = 3;
-	}
+ Method method = 1;
+ oneof body {
+  BlockHeightReq block_height_req = 2;
+  BlocksReq blocks_req = 3;
+ }
 }
 
 message Response {
-	Method method = 1;
-	oneof body {
-		BlockHeightResp block_height_resp = 2;
-		BlocksResp blocks_resp = 3;
-	}
+ Method method = 1;
+ oneof body {
+  BlockHeightResp block_height_resp = 2;
+  BlocksResp blocks_resp = 3;
+ }
 }
 
 message BlockHeightReq {}
 
 message BlockHeightResp {
-	uint64 block_height = 1;
+ uint64 block_height = 1;
 }
 
 message BlocksReq {
-	// Start with given block number.
-	uint64 from_number = 2;
+ // Start with given block number.
+ uint64 from_number = 2;
 }
 
 message BlocksResp {
-	repeated Block blocks = 1;
+ repeated Block blocks = 1;
 }
 ```
 
@@ -243,5 +243,5 @@ pub trait State: Debug + Clone + Send + Sync + 'static {
 
 ---
 
-| [< 00-概览](../README.md) | [02-项目初始化：Pre-commit Hooks 与 Github Action >](./02-init-project.md) |
-| ------------------------- | -------------------------------------------------------------------------- |
+| [< 00-概览](../../README_ZH.md) | [02-项目初始化：Pre-commit Hooks 与 Github Action >](./02-init-project.md) |
+| ------------------------------- | -------------------------------------------------------------------------- |
