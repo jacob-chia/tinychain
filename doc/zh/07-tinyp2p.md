@@ -37,7 +37,7 @@ tinyp2p 参考上文提到的例子`file-sharing`，使用 CSP (Communicating Se
 
 ### 1.1 架构
 
-![](img/07-csp.png)
+![](../img/07-csp.png)
 
 上图中，`p2p_server` 用来处理用户请求。如果是基于锁的并发模型，需要在 p2p_server 外面加一层锁，每处理一个请求就要获取一次锁，这样显然是低效的。而 CSP 模型是这样的：
 

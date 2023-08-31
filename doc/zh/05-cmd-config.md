@@ -80,7 +80,7 @@ async fn run(config_file: &str) {
 }
 ```
 
-其中，当执行`run()`时指定了配置文件，配置模板就不贴了，上链接：[./config-template.toml](../config-template.toml)。我们直接看 Rust 代码：
+其中，当执行`run()`时指定了配置文件，配置模板就不贴了，上链接：[./config-template.toml](../../config-template.toml)。我们直接看 Rust 代码：
 
 ```rs
 // src/config.rs
@@ -118,15 +118,15 @@ impl Config {
 1. 编译：`cargo build`;
 2. 查看有哪些命令：`RUST_LOG=info ./target/debug/tinychain`：
 
-   ![](img/05-cmd-help.png)
+   ![](../img/05-cmd-help.png)
 
 3. 创建账户：`RUST_LOG=info ./target/debug/tinychain new-account`：
 
-   ![](img/05-cmd-new-account.png)
+   ![](../img/05-cmd-new-account.png)
 
 4. 运行服务：`RUST_LOG=info ./target/debug/tinychain run -c ./config-template.toml`：
 
-   ![](img/05-cmd-run.png)
+   ![](../img/05-cmd-run.png)
 
 ## 4 小结
 
