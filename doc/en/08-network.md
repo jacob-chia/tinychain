@@ -1,38 +1,37 @@
-- [08 | 网络层](#08--网络层)
+- [08 | Network Layer](#08--network-layer)
   - [1 P2P](#1-p2p)
-    - [1.1 实现 trait PeerClient](#11-实现-trait-peerclient)
-    - [1.2 实现 trait EventHandler](#12-实现-trait-eventhandler)
-    - [1.3 识别出的 biz 接口](#13-识别出的-biz-接口)
+    - [1.1 Implementing the `trait PeerClient`](#11-implementing-the-trait-peerclient)
+    - [1.2 Implementing the `trait EventHandler`](#12-implementing-the-trait-eventhandler)
   - [2 HTTP](#2-http)
-    - [2.1 根据错误类型返回 HTTP Status Code](#21-根据错误类型返回-http-status-code)
-    - [2.2 识别出的 biz 接口](#22-识别出的-biz-接口)
-  - [3 小结](#3-小结)
+  - [3 Interfaces That Biz Needs to Provide](#3-interfaces-that-biz-needs-to-provide)
+  - [4 Summary](#4-summary)
 
-# 08 | 网络层
+# 08 | Network Layer
 
-> 本文为实战课，需要切换到对应的代码分支，并配合依赖库的文档一起学习。
+> This is a hands-on tutorial, so please switch to the corresponding code branch before reading.
 >
 > - Repo: `https://github.com/jacob-chia/tinychain.git`
-> - 分支：`git fetch && git switch 08-network`
-> - [axum](https://docs.rs/axum/latest/axum/): HTTP Server 框架，由 tokio 团队维护
+> - Branch：`git fetch && git switch 08-network`
 >
-> 其他 crates 使用简单，不再一一列举，清单在`Cargo.toml`中
+> Important crates used in this lesson:
+>
+> - [axum](https://docs.rs/axum/latest/axum/): a web application framework that focuses on ergonomics and modularity.
 
-实现 network 要依赖 biz 提供的接口，那为什么我们先写 network？
-
-回顾一下第一课的架构设计，我们的接口定义只做到了 crate 级别，crate 内部各层之间的交互并没有想清楚，如果需要做各层之间的接口定义，就需要画时序图了。其实对于小项目有个偷懒的办法，就是自顶向下的写代码，我们直接写 network，在实现过程中需要 biz 的什么功能就定义什么接口（内部不实现），等 network 写完了，biz 层的接口就识别出来了。
+The `network` layer is responsible for interacting with the outside world, including processing HTTP requests and interacting with other peers. In this lesson, we will implement the `network` layer, and in the process, we will identify the interfaces that the `biz` layer needs to provide.
 
 ## 1 P2P
 
-network::p2p 是 biz 与 tinyp2p 交互的桥梁，需要做两件事：
+The `network::p2p` is the bridge between `biz` and `tinyp2p`, and we need to do two things:
 
-- 封装 tinyp2p::Client，实现 biz 定义的 `trait PeerClient`;
-- 封装 biz::Node，实现 tinyp2p 定义的`triat EventHandler`;
+- Wrap `tinyp2p::Client` to implement the `trait PeerClient` defined by `biz`;
+- Wrap `biz::Node` to implement the `trait EventHandler` defined by `tinyp2p`;
 
-### 1.1 实现 trait PeerClient
+### 1.1 Implementing the `trait PeerClient`
+
+> See [src/network/p2p.rs](../../src/network/p2p.rs) for details.
 
 ```rs
-// src/network/p2p.rs 只保留了核心代码
+// src/network/p2p.rs
 
 #[derive(Debug, Clone)]
 pub struct P2pClient(Client);
@@ -75,10 +74,12 @@ impl PeerClient for P2pClient {
 }
 ```
 
-### 1.2 实现 trait EventHandler
+### 1.2 Implementing the `trait EventHandler`
+
+> See [src/network/p2p.rs](../../src/network/p2p.rs) for details.
 
 ```rs
-// src/network/p2p.rs 只保留了核心代码
+// src/network/p2p.rs
 
 #[derive(Debug, Clone)]
 pub struct EventHandlerImpl<S: State>(Node<S>);
@@ -120,9 +121,7 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
 }
 ```
 
-### 1.3 识别出的 biz 接口
-
-上文 EventHandlerImpl 是对 biz::Node 的封装，内部调用的`self.xxx()`都是 biz::Node 需要实现的接口。如下：
+As you can see, `EventHandlerImpl` is a wrapper for `biz::Node`, and the `self.xxx()` called internally is interfaces that `biz::Node` needs to provide. As follows:
 
 - `self.block_height()`
 - `self.get_blocks(req.from_number)`
@@ -131,11 +130,9 @@ impl<S: State> EventHandler for EventHandlerImpl<S> {
 
 ## 2 HTTP
 
-network::http 接口的实现非常简单，都是 biz 层接口的转发，直接看源码[src/network/http/mod.rs](../src/network/http/mod.rs)吧。但有个需求：如何根据错误类型返回不同的 HTTP Status Code？
+The implementation of the `network::http` is very simple, it is the forwarding of the `biz` layer interface, just go to the source code [src/network/http/mod.rs](../../src/network/http/mod.rs) for details. But there is a problem: How to return different HTTP Status Code according to the error type?
 
-### 2.1 根据错误类型返回 HTTP Status Code
-
-简单来说，就是需要为 Error 类型实现 `trait IntoResponse`，但我们的全局 Error 不应依赖 axum，所以在 http 模块内部新增了一个 `HTTPError`，并为 HTTPError 实现了 IntoResponse。
+Simply put, we need to implement the `trait IntoResponse` for the `Error` type, but our global `Error` should not depend on `axum`, so we add a `HTTPError` inside this module, and implement the `IntoResponse` for `HTTPError`.
 
 ```rs
 // src/network/http/mod.rs
@@ -171,10 +168,14 @@ impl IntoResponse for HttpError {
 }
 ```
 
-### 2.2 识别出的 biz 接口
+## 3 Interfaces That Biz Needs to Provide
 
-在 http 接口内部调用的`node.xxx()` 都是 biz::Node 需要实现的接口，如下：
+As you can see in the [src/network/http/mod.rs](../../src/network/http/mod.rs) and we mentioned in [1.2 Implementing the `trait EventHandler`](#12-implementing-the-trait-eventhandler), we have identified the interfaces that `biz::Node` needs to provide, as follows:
 
+- `node.block_height()`
+- `node.get_blocks(req.from_number)`
+- `node.handle_broadcast_block(block)`
+- `node.handle_broadcast_tx(tx)`
 - `node.get_blocks(params.from_number)`
 - `node.get_block(number)`
 - `node.last_block_hash()`
@@ -182,13 +183,13 @@ impl IntoResponse for HttpError {
 - `node.next_account_nonce(&params.account)`
 - `node.transfer(&tx.from, &tx.to, tx.value, tx.nonce)`
 
-## 3 小结
+## 4 Summary
 
-写完 network 我们再次体会到了 network 的作用：做类型转换和接口转发，不包含业务逻辑，目的是将 biz 与外部环境解耦，提升 biz 的稳定性。
+After writing the network layer, we once again realized the role of it: do type conversion and interface forwarding, decoupling the business logic from the external environment, and improving the stability of the application.
 
-另外，我们还识别出了 biz::Node 的接口，为下节课实现 biz 层打下了基础。
+Furthermore, we also identified the interfaces of `biz::Node`, laying the foundation for implementing the `biz` layer in the next lesson.
 
 ---
 
-| [< 07-tinyp2p：基于 CSP 的无锁并发模型](./07-tinyp2p.md) | [09-业务层：在业务层如何做读写分离？ >](./09-biz.md) |
-| -------------------------------------------------------- | ---------------------------------------------------- |
+| [< 07-Tinyp2p: A CSP Concurrency Model](./07-tinyp2p.md) | [09-Biz Layer: How to Do Read/Write Separation? >](./09-biz.md) |
+| -------------------------------------------------------- | --------------------------------------------------------------- |
