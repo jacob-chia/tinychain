@@ -41,7 +41,7 @@
 
 ### 1.1 分层
 
-![](img/06-libp2p-architecture.png)
+![](../img/06-libp2p-architecture.png)
 
 [libp2p 官方文档](https://docs.libp2p.io/concepts/introduction/overview/)一定要看，下文出现的新概念在这个文档里基本上都有。但如果简单概括的话，可以把 libp2p 分为三层：
 
@@ -62,7 +62,7 @@ libp2p 的 transport 支持丰富的配置，包括：
 - 对于 Noise，我们只需要知道它与 TLS 最大的区别是**不需要 CA 证书**。
 - 对于 Yamux，它可以**将一个 TCP 链接模拟成多条链路**。比如一个 P2P 节点要使用很多 Protocols，包括节点发现（Kademlia、Identify、Ping）、内容发现（Gossipsub）、和请求响应（Request-Response），那么 Yamux 就可以像下图一样，在一条 TCP 链接上模拟出多条链路，每条链路处理一个 Protocol。
 
-![](img/06-yamux.png)
+![](../img/06-yamux.png)
 
 2. Protocols
 

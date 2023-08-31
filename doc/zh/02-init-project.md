@@ -103,7 +103,7 @@ fn try_from(value: &str) -> Result<Self, Self::Error> {
 
 当我执行`cargo clippy --all-targets --all-features --tests --benches -- -D warnings`时会得到下面的提示：
 
-![](img/02-precommit.png)
+![](../img/02-precommit.png)
 
 clippy 告诉我不要手动删除字符串前缀，而应该使用标准库提供的接口，并且给出了参考代码。
 
